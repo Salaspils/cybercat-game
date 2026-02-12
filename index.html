@@ -1,0 +1,37 @@
+html
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>CyberCat: Meow Money</title>
+    <script src="https://telegram.org"></script>
+    <style>
+        body { background: #0f0f0f; color: #00ffcc; font-family: sans-serif; text-align: center; margin: 0; overflow: hidden; user-select: none; }
+        .container { display: flex; flex-direction: column; justify-content: center; height: 100vh; }
+        .cat { font-size: 100px; cursor: pointer; transition: transform 0.1s; filter: drop-shadow(0 0 15px #00ffcc); }
+        .cat:active { transform: scale(0.9); }
+        .balance { font-size: 32px; margin: 20px 0; font-weight: bold; text-shadow: 0 0 10px #00ffcc; }
+        .btn { background: #00ffcc; color: #000; padding: 15px 30px; border-radius: 12px; font-weight: bold; border: none; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="balance" id="score">0 CC</div>
+        <div class="cat" id="catBtn">🐈‍⬛</div>
+        <p>Нажимай на кота — майни репутацию!</p>
+        <button class="btn" onclick="Telegram.WebApp.close()">Закрыть игру</button>
+    </div>
+    <script>
+        let score = 0;
+        const scoreEl = document.getElementById('score');
+        document.getElementById('catBtn').addEventListener('click', () => {
+            score++;
+            scoreEl.innerText = score + ' CC';
+            Telegram.WebApp.HapticFeedback.impactOccurred('medium');
+        });
+        Telegram.WebApp.ready();
+        Telegram.WebApp.expand();
+    </script>
+</body>
+</html>
