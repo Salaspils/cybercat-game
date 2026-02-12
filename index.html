@@ -4,147 +4,109 @@ html
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>CyberCat: Real Time</title>
+    <title>CyberCat: Universe</title>
     <script src="https://telegram.org"></script>
     <style>
-        :root { --neon: #00ffcc; --gold: #ffcc00; --sky-day: #4facfe; --sky-night: #050508; }
+        :root { --neon: #00ffcc; --gold: #ffcc00; }
         body { background: #000; color: #fff; font-family: 'Inter', sans-serif; margin: 0; overflow: hidden; touch-action: none; }
         
         #viewport { width: 100vw; height: 100vh; position: relative; overflow: hidden; }
         
-        /* Небо */
-        #sky-layer { 
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
-            z-index: 1; transition: 10s ease; /* Очень плавный переход цвета */
-        }
-        .celestial { position: absolute; font-size: 80px; transition: 10s linear; filter: drop-shadow(0 0 30px #fff); z-index: 2; }
-        #sun { color: var(--gold); }
-        #moon { color: #f5f5f5; filter: drop-shadow(0 0 40px #fff); }
-        #stars-canvas { position: absolute; width: 100%; height: 100%; z-index: 1; opacity: 0; transition: 10s ease; }
+        #sky-layer { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; transition: 5s; }
+        .celestial { position: absolute; font-size: 60px; z-index: 2; transition: 5s linear; }
+        #stars-canvas { position: absolute; width: 100%; height: 100%; z-index: 1; opacity: 0; transition: 5s; }
 
-        /* Мир */
         #world { 
-            position: absolute; width: 8000px; height: 8000px; z-index: 10;
+            position: absolute; width: 5000px; height: 5000px; z-index: 10;
             background-color: #1a4d2e; background-image: url('https://www.transparenttextures.com');
-            transition: 10s ease;
         }
 
         #cat { 
-            position: absolute; width: 90px; height: 90px; z-index: 1000; 
+            position: absolute; width: 80px; height: 80px; z-index: 1000; 
             transform: translate(-50%, -50%); pointer-events: none;
             background: url('https://media.giphy.com') no-repeat center;
             background-size: contain;
         }
 
-        .tree { position: absolute; width: 150px; height: 200px; background: url('https://pngimg.com') no-repeat center; background-size: contain; transform: translate(-50%, -90%); z-index: 800; }
+        .tree { position: absolute; width: 120px; height: 160px; background: url('https://pngimg.com') no-repeat center; background-size: contain; transform: translate(-50%, -90%); z-index: 800; }
 
-        /* UI */
-        .glass { position: fixed; background: rgba(0,0,0,0.7); backdrop-filter: blur(10px); border: 1px solid var(--neon); padding: 12px; border-radius: 20px; z-index: 5000; }
+        .glass { position: fixed; background: rgba(0,0,0,0.8); border: 1px solid var(--neon); padding: 12px; border-radius: 20px; z-index: 5000; top: 15px; left: 15px; }
     </style>
 </head>
 <body>
     <div id="sky-layer">
         <canvas id="stars-canvas"></canvas>
         <div id="sun" class="celestial">☀️</div>
-        <div id="moon" class="celestial">🌙</div>
+        <div id="moon" class="celestial" style="display:none">🌙</div>
     </div>
 
     <div id="viewport">
         <div id="world"><div id="cat"></div></div>
     </div>
     
-    <div class="glass" style="top: 15px; left: 15px;">💰 <b id="bal">5000</b><br><small id="time-info">Загрузка времени...</small></div>
+    <div class="glass">💰 <b id="bal">5000</b><br><small id="time-info">12:00 (День)</small></div>
 
     <script>
         const tg = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp : { expand: () => {}, ready: () => {} };
-        let state = { catPos: {x: 4000, y: 4000}, score: 5000 };
-        let gameHour = 12; // Старт в полдень
+        
+        // Авто-центровка при старте
+        let state = { 
+            catPos: { x: 2500, y: 2500 }, 
+            score: 5000 
+        };
+        let gameHour = 12;
 
         const world = document.getElementById('world');
-        const sky = document.getElementById('sky-layer');
-        const sCanvas = document.getElementById('stars-canvas');
-        const sCtx = sCanvas.getContext('2d');
+        const cat = document.getElementById('cat');
 
         function init() {
-            sCanvas.width = window.innerWidth; sCanvas.height = window.innerHeight;
-            createStars();
-            for(let i=0; i<45; i++) renderTree(Math.random()*7400+300, Math.random()*7400+300);
+            // Очистка старой памяти координат
+            localStorage.removeItem('cybercat_save_pos'); 
             
-            // 1 час за 10 минут (600 000 мс)
-            setInterval(tick, 600000); 
-            // Для теста: запуск первой смены сразу
-            tick(); 
-
+            for(let i=0; i<30; i++) {
+                const t = document.createElement('div'); t.className = 'tree';
+                t.style.left = (Math.random()*4000+500)+'px'; 
+                t.style.top = (Math.random()*4000+500)+'px'; 
+                world.appendChild(t);
+            }
+            
             updateCamera();
+            setInterval(tick, 5000); // 1 час = 5 сек для теста (потом вернем 10 мин)
             tg.ready(); tg.expand();
         }
 
-        function createStars() {
-            sCtx.fillStyle = "#fff";
-            for(let i=0; i<250; i++) {
-                const x = Math.random() * sCanvas.width;
-                const y = Math.random() * sCanvas.height;
-                const size = Math.random() * 2;
-                sCtx.fillRect(x, y, size, size);
-            }
-        }
-
         function tick() {
+            gameHour = (gameHour + 1) % 24;
             const isNight = gameHour >= 20 || gameHour <= 6;
             document.getElementById('time-info').innerText = `${gameHour}:00 (${isNight ? 'Ночь' : 'День'})`;
             
-            // Плавная смена атмосферы
-            sky.style.background = isNight ? "#05051a" : "linear-gradient(to bottom, #4facfe 0%, #00f2fe 100%)";
+            document.getElementById('sky-layer').style.background = isNight ? "#05051a" : "#4facfe";
             world.style.backgroundColor = isNight ? "#0a1f0f" : "#1a4d2e";
-            sCanvas.style.opacity = isNight ? "1" : "0";
-            
-            const sun = document.getElementById('sun');
-            const moon = document.getElementById('moon');
-
-            // Позиционирование по дуге
-            const angle = (gameHour / 24) * Math.PI * 2 + Math.PI;
-            const x = 50 + 40 * Math.cos(angle);
-            const y = 50 + 40 * Math.sin(angle);
-
-            if (!isNight) {
-                sun.style.display = 'block'; moon.style.display = 'none';
-                sun.style.left = x + '%'; sun.style.top = y + '%';
-            } else {
-                sun.style.display = 'none'; moon.style.display = 'block';
-                moon.style.left = x + '%'; moon.style.top = y + '%';
-            }
-
-            gameHour = (gameHour + 1) % 24;
+            document.getElementById('stars-canvas').style.opacity = isNight ? "1" : "0";
+            document.getElementById('sun').style.display = isNight ? 'none' : 'block';
+            document.getElementById('moon').style.display = isNight ? 'block' : 'none';
         }
 
         function updateCamera() {
-            const cat = document.getElementById('cat');
             cat.style.left = state.catPos.x + 'px';
             cat.style.top = state.catPos.y + 'px';
             world.style.transform = `translate(${-state.catPos.x + window.innerWidth/2}px, ${-state.catPos.y + window.innerHeight/2}px)`;
         }
 
-        // Управление мышью (ПК)
-        let isMouseDown = false;
-        window.addEventListener('mousedown', () => isMouseDown = true);
-        window.addEventListener('mouseup', () => isMouseDown = false);
-        window.addEventListener('mousemove', (e) => {
-            if (isMouseDown) {
-                state.catPos.x += (e.clientX - window.innerWidth/2) * 0.05 * 10;
-                state.catPos.y += (e.clientY - window.innerHeight/2) * 0.05 * 10;
-                updateCamera();
-            }
+        // Клик = мгновенный телепорт Кота (для теста)
+        window.addEventListener('mousedown', (e) => {
+            // Рассчитываем координаты клика относительно мира
+            const rect = world.getBoundingClientRect();
+            state.catPos.x = e.clientX - rect.left;
+            state.catPos.y = e.clientY - rect.top;
+            updateCamera();
         });
-
-        function renderTree(x, y) {
-            const t = document.createElement('div'); t.className = 'tree';
-            t.style.left = x+'px'; t.style.top = y+'px'; world.appendChild(t);
-        }
 
         init();
     </script>
 </body>
 </html>
+
 
 
 
