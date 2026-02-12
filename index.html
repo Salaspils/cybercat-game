@@ -3,23 +3,25 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>CyberCat v80.9 - GUARANTEED START</title>
-    <!-- ИСПОЛЬЗУЕМ САМЫЙ НАДЕЖНЫЙ CDN -->
+    <title>CyberCat v80.10 - TRIPLE SHIELD</title>
+    
+    <!-- КАНАЛ 1: CLOUDFLARE -->
     <script src="https://cdnjs.cloudflare.com"></script>
+    
     <style>
         body { margin: 0; background: #000; overflow: hidden; font-family: 'Courier New', monospace; color: #00ffcc; touch-action: none; }
         #ui { position: fixed; top: 15px; width: 100%; display: flex; justify-content: space-around; z-index: 100; pointer-events: none; }
         .glass { background: rgba(0,255,200,0.1); border: 1px solid #00ffcc; padding: 10px 15px; border-radius: 12px; color: #fff; pointer-events: auto; backdrop-filter: blur(5px); font-size: 14px; text-align: center; }
         .btn-panel { position: fixed; bottom: 20px; width: 100%; display: flex; justify-content: center; gap: 10px; z-index: 100; pointer-events: none; }
-        .action-btn { background: #00ffcc; color: #000; border: none; padding: 12px 20px; border-radius: 10px; font-weight: bold; cursor: pointer; pointer-events: auto; }
+        .action-btn { background: #00ffcc; color: #000; border: none; padding: 12px 20px; border-radius: 10px; font-weight: bold; cursor: pointer; pointer-events: auto; box-shadow: 0 0 15px rgba(0,255,200,0.3); }
         #energy-bar { width: 80px; height: 6px; background: #111; border-radius: 3px; margin-top: 5px; border: 1px solid #00ffcc; overflow: hidden; }
         #energy-fill { height: 100%; background: #00ffcc; width: 100%; transition: 0.3s; }
-        #boot-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; color: #0f0; display: flex; align-items: center; justify-content: center; z-index: 999; text-align: center; }
+        #status { position: fixed; top: 50%; width: 100%; text-align: center; color: #0f0; z-index: 999; }
     </style>
 </head>
 <body>
 
-    <div id="boot-screen">INITIALIZING CYBERCAT ENGINE...<br>IF SCREEN STAYS BLACK, CHECK INTERNET.</div>
+    <div id="status">ЗАГРУЗКА ЯДРА CYBERCAT...</div>
 
     <div id="ui" style="display:none">
         <div class="glass">💰 <span id="bal">0</span> $MEOW<br><div id="energy-bar"><div id="energy-fill"></div></div></div>
@@ -32,22 +34,30 @@
     </div>
 
     <script>
-        // ГЛОБАЛЬНЫЙ ЗАПУСК
-        window.addEventListener('load', function() {
+        // Функция проверки и запуска
+        function checkAndStart() {
             if (typeof THREE === 'undefined') {
-                document.getElementById('boot-screen').innerHTML = "<span style='color:red'>ERROR: THREE.JS NOT LOADED.<br>PLEASE CHECK YOUR CONNECTION.</span>";
-                return;
+                // КАНАЛ 2: GOOGLE (если первый не сработал)
+                let script = document.createElement('script');
+                script.src = "https://ajax.googleapis.com";
+                script.onload = initGame;
+                script.onerror = () => {
+                    document.getElementById('status').innerHTML = "<span style='color:red'>ОШИБКА: ДОСТУП К ДВИЖКУ ЗАБЛОКИРОВАН.<br>ВКЛЮЧИТЕ ИНТЕРНЕТ ИЛИ ОТКЛЮЧИТЕ БЛОКИРОВЩИКИ.</span>";
+                };
+                document.head.appendChild(script);
+            } else {
+                initGame();
             }
-            document.getElementById('boot-screen').style.display = 'none';
-            document.getElementById('ui').style.display = 'flex';
-            document.querySelector('.btn-panel').style.display = 'flex';
-            initGame();
-        });
+        }
 
         let db, scene, camera, renderer, player, ground, npcs = [];
         let targetPos = new THREE.Vector3(0, 0.8, 0);
 
         function initGame() {
+            document.getElementById('status').style.display = 'none';
+            document.getElementById('ui').style.display = 'flex';
+            document.querySelector('.btn-panel').style.display = 'flex';
+
             db = JSON.parse(localStorage.getItem('cybercat_v80_final')) || { 
                 bal: 100, inv: 0, nrg: 100, buildings: [] 
             };
@@ -69,7 +79,7 @@
             scene.add(ground);
             scene.add(new THREE.GridHelper(1000, 50, 0x00ffcc, 0x111111));
 
-            player = new THREE.Mesh(new THREE.IcosahedronGeometry(0.8, 1), new THREE.MeshStandardMaterial({color: 0x00ffcc, emissive: 0x00ffcc}));
+            player = new THREE.Mesh(new THREE.SphereGeometry(0.8, 16, 16), new THREE.MeshStandardMaterial({color: 0x00ffcc, emissive: 0x00ffcc}));
             player.position.y = 0.8;
             scene.add(player);
 
@@ -120,7 +130,7 @@
 
         window.sellAll = () => {
             if(db.inv > 0) {
-                db.bal += (db.inv * 10) * 0.9; // 10% TAX
+                db.bal += (db.inv * 10) * 0.9; 
                 db.inv = 0;
                 updateUI();
             }
@@ -148,6 +158,8 @@
             camera.lookAt(player.position);
             renderer.render(scene, camera);
         }
+
+        window.onload = checkAndStart;
     </script>
 </body>
 </html>
