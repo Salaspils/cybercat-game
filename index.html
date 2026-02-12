@@ -4,14 +4,14 @@ html
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>CyberCat: Final Core v80</title>
+    <title>CyberCat v80.0</title>
     <style>
-        body { margin: 0; background: #010505; overflow: hidden; font-family: 'Segoe UI', sans-serif; color: #00ffcc; touch-action: none; }
+        body { margin: 0; background: #010505; overflow: hidden; font-family: 'Courier New', monospace; color: #00ffcc; touch-action: none; }
         #ui { position: fixed; top: 15px; width: 100%; display: flex; flex-direction: column; gap: 10px; z-index: 100; pointer-events: none; }
         .row { display: flex; justify-content: space-around; padding: 0 10px; }
-        .glass { background: rgba(0,20,0,0.8); border: 1px solid #00ffcc; padding: 10px 15px; border-radius: 15px; color: #fff; pointer-events: auto; box-shadow: 0 0 15px #00ffcc44; backdrop-filter: blur(10px); font-size: 12px; }
+        .glass { background: rgba(0,20,0,0.8); border: 1px solid #00ffcc; padding: 10px 15px; border-radius: 15px; color: #fff; pointer-events: auto; box-shadow: 0 0 15px #00ffcc44; backdrop-filter: blur(10px); font-size: 12px; text-align: center; }
         .btn-panel { position: fixed; bottom: 20px; width: 100%; display: flex; justify-content: center; gap: 10px; z-index: 100; pointer-events: none; }
-        .action-btn { background: #ff0066; color: #fff; border: none; padding: 12px 15px; border-radius: 12px; font-weight: bold; cursor: pointer; pointer-events: auto; box-shadow: 0 0 15px #ff006666; font-size: 10px; }
+        .action-btn { background: #ff0066; color: #fff; border: none; padding: 12px 15px; border-radius: 12px; font-weight: bold; cursor: pointer; pointer-events: auto; box-shadow: 0 0 15px #ff006666; font-size: 11px; }
         #energy-bar { width: 80px; height: 6px; background: #111; border-radius: 3px; margin-top: 5px; border: 1px solid #00ffcc; overflow: hidden; }
         #energy-fill { height: 100%; background: #00ffcc; width: 100%; transition: 0.3s; }
     </style>
@@ -20,12 +20,10 @@ html
     <div id="ui">
         <div class="row">
             <div class="glass">💰 <span id="bal">0</span> $MEOW<br><div id="energy-bar"><div id="energy-fill"></div></div></div>
-            <div class="glass">🌾 STOCK: <span id="inv">0</span></div>
+            <div class="glass">🌾 DATA: <span id="inv">0</span></div>
             <div class="glass">
                 <select id="quality" style="background:none; color:#00ffcc; border:none;" onchange="window.setQuality(this.value)">
-                    <option value="low">LOW</option>
-                    <option value="med">MED</option>
-                    <option value="ultra">ULTRA</option>
+                    <option value="low">LOW</option><option value="med">MED</option><option value="ultra">ULTRA</option>
                 </select>
             </div>
         </div>
@@ -39,13 +37,11 @@ html
     <script type="module">
         import * as THREE from 'https://esm.sh';
 
-        // --- DATABASE ---
         const ADMIN_COMMISSION = 0.1;
         let db = JSON.parse(localStorage.getItem('cybercat_v80_final')) || { 
             bal: 100, inv: 0, nrg: 100, q: 'med', buildings: [] 
         };
 
-        // --- ENGINE ---
         const scene = new THREE.Scene();
         scene.background = new THREE.Color(0x010505);
         scene.fog = new THREE.FogExp2(0x010505, 0.015);
@@ -59,7 +55,6 @@ html
         sun.position.set(20, 50, 20);
         scene.add(sun, new THREE.AmbientLight(0x004400, 0.5));
 
-        // --- WORLD & PLAYER ---
         const ground = new THREE.Mesh(new THREE.PlaneGeometry(1000, 1000), new THREE.MeshStandardMaterial({color: 0x011101}));
         ground.rotation.x = -Math.PI/2;
         scene.add(ground, new THREE.GridHelper(1000, 50, 0x00ffcc, 0x012211));
@@ -69,7 +64,6 @@ html
         scene.add(player);
         let targetPos = new THREE.Vector3(0, 0.8, 0);
 
-        // --- NPC ---
         const npcs = [];
         function spawnNPC(x, z) {
             const mesh = new THREE.Mesh(new THREE.BoxGeometry(2, 1.5, 3), new THREE.MeshStandardMaterial({color: 0xffffff, wireframe: true}));
@@ -77,9 +71,16 @@ html
             scene.add(mesh);
             npcs.push({ mesh, vel: new THREE.Vector3() });
         }
-        for(let i=0; i<15; i++) spawnNPC((Math.random()-0.5)*100, (Math.random()-0.5)*100);
+        for(let i=0; i<15; i++) spawnNPC((Math.random()-0.5)*150, (Math.random()-0.5)*150);
 
-        // --- LOGIC ---
+        // Рендер сохраненных зданий
+        function renderB(pos) {
+            const b = new THREE.Mesh(new THREE.BoxGeometry(6, 4, 6), new THREE.MeshStandardMaterial({color: 0x00ffcc, wireframe: true}));
+            b.position.set(pos.x, 2, pos.z);
+            scene.add(b);
+        }
+        db.buildings.forEach(renderB);
+
         window.updateUI = () => {
             document.getElementById('bal').innerText = Math.floor(db.bal);
             document.getElementById('inv').innerText = db.inv;
@@ -90,10 +91,9 @@ html
         window.placeBuilding = () => {
             if(db.bal >= 500) {
                 db.bal -= 500;
-                db.buildings.push({x: player.position.x, z: player.position.z});
-                const b = new THREE.Mesh(new THREE.BoxGeometry(6, 4, 6), new THREE.MeshStandardMaterial({color: 0x00ffcc, wireframe: true}));
-                b.position.set(player.position.x, 2, player.position.z);
-                scene.add(b);
+                const pos = {x: player.position.x, z: player.position.z};
+                db.buildings.push(pos);
+                renderB(pos);
                 window.updateUI();
             }
         };
@@ -130,7 +130,7 @@ html
                 const dist = n.mesh.position.distanceTo(player.position);
                 if(dist < 12) {
                     const dir = new THREE.Vector3().subVectors(n.mesh.position, player.position).normalize();
-                    n.vel.add(dir.multiplyScalar(0.05));
+                    n.vel.add(dir.multiplyScalar(0.03));
                 }
                 if(dist < 3 && db.nrg >= 1) {
                     db.inv++; db.nrg -= 0.5;
@@ -138,11 +138,11 @@ html
                     window.updateUI();
                 }
                 n.mesh.position.add(n.vel);
-                n.vel.multiplyScalar(0.9);
+                n.vel.multiplyScalar(0.92);
                 n.mesh.rotation.y += 0.01;
             });
 
-            if(db.nrg < 100) { db.nrg += 0.05; window.updateUI(); }
+            if(db.nrg < 100) { db.nrg += 0.04; window.updateUI(); }
 
             camera.position.lerp(new THREE.Vector3(player.position.x, 20, player.position.z + 25), 0.05);
             camera.lookAt(player.position);
