@@ -7,108 +7,65 @@ html
     <title>CyberCat: HD Reality</title>
     <script src="https://telegram.org"></script>
     <style>
-        :root { --neon: #00ffcc; --gold: #ffcc00; }
+        :root { --neon: #00ffcc; }
         body { background: #010502; color: #fff; font-family: 'Inter', sans-serif; margin: 0; overflow: hidden; touch-action: none; }
-        
         #viewport { width: 100vw; height: 100vh; position: relative; overflow: hidden; }
-        
-        /* HD Земля с глубокой текстурой */
         #world { 
-            position: absolute; width: 6000px; height: 6000px; z-index: 10;
+            position: absolute; width: 4000px; height: 4000px; z-index: 10;
             background-color: #1a4d2e;
-            background-image: 
-                url('https://www.transparenttextures.com'), 
-                url('https://www.transparenttextures.com');
-            background-blend-mode: soft-light;
-            box-shadow: inset 0 0 500px rgba(0,0,0,0.8);
+            background-image: url('https://www.transparenttextures.com');
+            box-shadow: inset 0 0 300px rgba(0,0,0,0.5);
         }
-
-        /* HD Кот с динамической тенью */
         #cat { 
-            position: absolute; width: 110px; height: 110px; z-index: 1000; 
+            position: absolute; width: 100px; height: 100px; z-index: 1000; 
             transform: translate(-50%, -50%); pointer-events: none;
             background: url('https://media.giphy.com') no-repeat center;
             background-size: contain;
         }
-        #cat::after { /* Тень кота */
-            content: ''; position: absolute; bottom: 0; left: 50%; width: 60px; height: 20px;
-            background: rgba(0,0,0,0.4); border-radius: 50%; transform: translateX(-50%); z-index: -1;
-            filter: blur(5px);
-        }
-
-        /* HD Растительность с тенями */
-        .tree { 
-            position: absolute; width: 220px; height: 300px; 
-            background: url('https://pngimg.com') no-repeat center; 
-            background-size: contain; transform: translate(-50%, -95%); z-index: 800;
-            animation: sway 6s ease-in-out infinite; transform-origin: bottom center;
-            filter: drop-shadow(25px 45px 15px rgba(0,0,0,0.4));
-        }
-
-        .bush {
-            position: absolute; width: 90px; height: 70px;
-            background: url('https://pngimg.com') no-repeat center;
-            background-size: contain; transform: translate(-50%, -50%); z-index: 700;
-            filter: drop-shadow(10px 15px 5px rgba(0,0,0,0.3));
-        }
-
-        @keyframes sway {
-            0%, 100% { transform: translate(-50%, -95%) rotate(-1.5deg); }
-            50% { transform: translate(-50%, -95%) rotate(1.5deg); }
-        }
-
-        /* Эффект освещения и виньетка */
-        #fx-layer { position: fixed; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index: 5000; 
-            background: radial-gradient(circle, transparent 40%, rgba(0,0,0,0.4) 100%);
-        }
-
-        .ui-top { position: fixed; top: 20px; left: 20px; z-index: 6000; background: rgba(0,0,0,0.85); backdrop-filter: blur(15px); border: 1px solid var(--neon); padding: 15px; border-radius: 25px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        .tree { position: absolute; width: 150px; height: 200px; background: url('https://pngimg.com') no-repeat center; background-size: contain; transform: translate(-50%, -95%); z-index: 800; }
+        .ui { position: fixed; top: 20px; left: 20px; z-index: 5000; background: rgba(0,0,0,0.8); border: 1px solid var(--neon); padding: 15px; border-radius: 20px; }
     </style>
 </head>
 <body>
     <div id="viewport">
         <div id="world"><div id="cat"></div></div>
     </div>
-    <div id="fx-layer"></div>
-
-    <div class="ui-top">
-        <span style="font-size: 20px;">💰 <b id="bal">5,000</b></span><br>
-        <small style="color: #aaa;">Status: HD Cinematic Mode</small>
-    </div>
+    <div class="ui">💰 <b id="bal">5000</b></div>
 
     <script>
-        const tg = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp : { expand: () => {}, ready: () => {} };
-        let state = { catPos: { x: 3000, y: 3000 }, score: 5000 };
+        // Защита от ошибок в браузере
+        const tg = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp : { expand:()=>{}, ready:()=>{} };
+        
+        // Принудительные координаты центра для ПК
+        let state = { x: 2000, y: 2000, score: 5000 };
+
         const world = document.getElementById('world');
         const cat = document.getElementById('cat');
 
-        function init() {
-            // Генерация HD леса
-            for(let i=0; i<65; i++) {
-                const type = Math.random() > 0.4 ? 'tree' : 'bush';
-                const el = document.createElement('div'); el.className = type;
-                el.style.left = (Math.random()*5600+200)+'px'; 
-                el.style.top = (Math.random()*5600+200)+'px'; 
-                world.appendChild(el);
-            }
-            updateCamera();
-            tg.ready(); tg.expand();
+        function update() {
+            cat.style.left = state.x + 'px';
+            cat.style.top = state.y + 'px';
+            world.style.transform = `translate(${-state.x + window.innerWidth/2}px, ${-state.y + window.innerHeight/2}px)`;
         }
 
-        function updateCamera() {
-            cat.style.left = state.catPos.x + 'px';
-            cat.style.top = state.catPos.y + 'px';
-            world.style.transform = `translate(${-state.catPos.x + window.innerWidth/2}px, ${-state.catPos.y + window.innerHeight/2}px)`;
-        }
-
+        // Клик на ПК = движение
         window.addEventListener('mousedown', (e) => {
             const rect = world.getBoundingClientRect();
-            state.catPos.x = e.clientX - rect.left;
-            state.catPos.y = e.clientY - rect.top;
-            updateCamera();
+            state.x = e.clientX - rect.left;
+            state.y = e.clientY - rect.top;
+            update();
         });
 
-        init();
+        // Генерация леса
+        for(let i=0; i<30; i++) {
+            const t = document.createElement('div'); t.className = 'tree';
+            t.style.left = (Math.random()*3600+200)+'px'; 
+            t.style.top = (Math.random()*3600+200)+'px'; 
+            world.appendChild(t);
+        }
+
+        update();
+        tg.ready();
     </script>
 </body>
 </html>
