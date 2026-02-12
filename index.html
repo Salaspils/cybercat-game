@@ -4,130 +4,147 @@ html
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>CyberCat: Universe</title>
+    <title>CyberCat: Real Time</title>
     <script src="https://telegram.org"></script>
     <style>
-        :root { --neon: #00ffcc; --pink: #ff0066; --gold: #ffcc00; --bg: #010103; }
-        body { background: var(--bg); color: #fff; font-family: 'Orbitron', sans-serif; margin: 0; overflow: hidden; touch-action: none; }
+        :root { --neon: #00ffcc; --gold: #ffcc00; --sky-day: #4facfe; --sky-night: #050508; }
+        body { background: #000; color: #fff; font-family: 'Inter', sans-serif; margin: 0; overflow: hidden; touch-action: none; }
+        
         #viewport { width: 100vw; height: 100vh; position: relative; overflow: hidden; }
-        #world { position: absolute; width: 8000px; height: 8000px; background: #030703; 
-            background-image: linear-gradient(rgba(0,255,204,0.05) 1px, transparent 1px), 
-            linear-gradient(90deg, rgba(0,255,204,0.05) 1px, transparent 1px);
-            background-size: 100px 100px; transition: 0.1s ease-out; }
-        #cat { position: absolute; font-size: 70px; z-index: 500; transform: translate(-50%, -50%); filter: drop-shadow(0 0 25px var(--neon)); pointer-events: none; }
-        .ui-panel { position: fixed; top: 15px; width: 94%; left: 3%; display: flex; justify-content: space-between; z-index: 1000; pointer-events: none; }
-        .glass { background: rgba(0,0,0,0.8); border: 1px solid var(--neon); padding: 10px; border-radius: 15px; pointer-events: auto; text-align: center; }
-        .footer { position: fixed; bottom: 25px; width: 100%; display: flex; justify-content: center; gap: 10px; z-index: 1000; }
-        .btn { background: #000; border: 1px solid var(--neon); color: #fff; padding: 12px; border-radius: 12px; font-size: 10px; font-weight: bold; cursor: pointer; }
-        .entity { position: absolute; transform: translate(-50%, -50%); z-index: 100; cursor: pointer; }
-        .boss { font-size: 150px; filter: drop-shadow(0 0 50px var(--pink)); }
+        
+        /* Небо */
+        #sky-layer { 
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+            z-index: 1; transition: 10s ease; /* Очень плавный переход цвета */
+        }
+        .celestial { position: absolute; font-size: 80px; transition: 10s linear; filter: drop-shadow(0 0 30px #fff); z-index: 2; }
+        #sun { color: var(--gold); }
+        #moon { color: #f5f5f5; filter: drop-shadow(0 0 40px #fff); }
+        #stars-canvas { position: absolute; width: 100%; height: 100%; z-index: 1; opacity: 0; transition: 10s ease; }
+
+        /* Мир */
+        #world { 
+            position: absolute; width: 8000px; height: 8000px; z-index: 10;
+            background-color: #1a4d2e; background-image: url('https://www.transparenttextures.com');
+            transition: 10s ease;
+        }
+
+        #cat { 
+            position: absolute; width: 90px; height: 90px; z-index: 1000; 
+            transform: translate(-50%, -50%); pointer-events: none;
+            background: url('https://media.giphy.com') no-repeat center;
+            background-size: contain;
+        }
+
+        .tree { position: absolute; width: 150px; height: 200px; background: url('https://pngimg.com') no-repeat center; background-size: contain; transform: translate(-50%, -90%); z-index: 800; }
+
+        /* UI */
+        .glass { position: fixed; background: rgba(0,0,0,0.7); backdrop-filter: blur(10px); border: 1px solid var(--neon); padding: 12px; border-radius: 20px; z-index: 5000; }
     </style>
 </head>
 <body>
+    <div id="sky-layer">
+        <canvas id="stars-canvas"></canvas>
+        <div id="sun" class="celestial">☀️</div>
+        <div id="moon" class="celestial">🌙</div>
+    </div>
+
     <div id="viewport">
-        <div id="world"><div id="cat">🐈‍⬛</div></div>
+        <div id="world"><div id="cat"></div></div>
     </div>
-    <div id="ui-layer">
-        <div class="ui-panel">
-            <div class="glass">💰 <b id="bal">0</b><br><small id="pps">+0/с</small></div>
-            <div class="glass" style="border-color:var(--pink)">👾 BOSS HP: <br><b id="boss-hp">1,000,000</b></div>
-        </div>
-        <div class="footer">
-            <button class="btn" onclick="toggleBoard()">🛹 ХОВЕРБОРД</button>
-            <button class="btn" style="border-color:var(--gold)" onclick="resetPos()">🏠 ДОМОЙ</button>
-            <button class="btn" onclick="inviteFriends()">🎁 ПРИГЛАСИТЬ</button>
-        </div>
-    </div>
+    
+    <div class="glass" style="top: 15px; left: 15px;">💰 <b id="bal">5000</b><br><small id="time-info">Загрузка времени...</small></div>
 
     <script>
-        // Безопасный доступ к Telegram API
-        const tg = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp : {
-            expand: () => {}, ready: () => {}, 
-            HapticFeedback: { impactOccurred: () => {}, notificationOccurred: () => {} },
-            showAlert: (m) => alert(m), openTelegramLink: (u) => window.open(u)
-        };
-
-        let state = JSON.parse(localStorage.getItem('cybercat_v20_2')) || {
-            score: 0, pps: 0, catPos: {x: 4000, y: 4000}, onBoard: false, bossHp: 1000000
-        };
+        const tg = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp : { expand: () => {}, ready: () => {} };
+        let state = { catPos: {x: 4000, y: 4000}, score: 5000 };
+        let gameHour = 12; // Старт в полдень
 
         const world = document.getElementById('world');
-        const cat = document.getElementById('cat');
+        const sky = document.getElementById('sky-layer');
+        const sCanvas = document.getElementById('stars-canvas');
+        const sCtx = sCanvas.getContext('2d');
 
         function init() {
-            spawnBoss();
+            sCanvas.width = window.innerWidth; sCanvas.height = window.innerHeight;
+            createStars();
+            for(let i=0; i<45; i++) renderTree(Math.random()*7400+300, Math.random()*7400+300);
+            
+            // 1 час за 10 минут (600 000 мс)
+            setInterval(tick, 600000); 
+            // Для теста: запуск первой смены сразу
+            tick(); 
+
             updateCamera();
-            setInterval(() => {
-                state.score += state.pps;
-                if(state.bossHp > 0) state.bossHp -= 5;
-                updateUI();
-            }, 1000);
             tg.ready(); tg.expand();
         }
 
-        function updateUI() {
-            document.getElementById('bal').innerText = Math.floor(state.score).toLocaleString();
-            document.getElementById('pps').innerText = `+${state.pps}/с`;
-            document.getElementById('boss-hp').innerText = state.bossHp.toLocaleString();
-            localStorage.setItem('cybercat_v20_2', JSON.stringify(state));
+        function createStars() {
+            sCtx.fillStyle = "#fff";
+            for(let i=0; i<250; i++) {
+                const x = Math.random() * sCanvas.width;
+                const y = Math.random() * sCanvas.height;
+                const size = Math.random() * 2;
+                sCtx.fillRect(x, y, size, size);
+            }
+        }
+
+        function tick() {
+            const isNight = gameHour >= 20 || gameHour <= 6;
+            document.getElementById('time-info').innerText = `${gameHour}:00 (${isNight ? 'Ночь' : 'День'})`;
+            
+            // Плавная смена атмосферы
+            sky.style.background = isNight ? "#05051a" : "linear-gradient(to bottom, #4facfe 0%, #00f2fe 100%)";
+            world.style.backgroundColor = isNight ? "#0a1f0f" : "#1a4d2e";
+            sCanvas.style.opacity = isNight ? "1" : "0";
+            
+            const sun = document.getElementById('sun');
+            const moon = document.getElementById('moon');
+
+            // Позиционирование по дуге
+            const angle = (gameHour / 24) * Math.PI * 2 + Math.PI;
+            const x = 50 + 40 * Math.cos(angle);
+            const y = 50 + 40 * Math.sin(angle);
+
+            if (!isNight) {
+                sun.style.display = 'block'; moon.style.display = 'none';
+                sun.style.left = x + '%'; sun.style.top = y + '%';
+            } else {
+                sun.style.display = 'none'; moon.style.display = 'block';
+                moon.style.left = x + '%'; moon.style.top = y + '%';
+            }
+
+            gameHour = (gameHour + 1) % 24;
         }
 
         function updateCamera() {
+            const cat = document.getElementById('cat');
             cat.style.left = state.catPos.x + 'px';
             cat.style.top = state.catPos.y + 'px';
             world.style.transform = `translate(${-state.catPos.x + window.innerWidth/2}px, ${-state.catPos.y + window.innerHeight/2}px)`;
         }
 
-        // Управление (ПК и Смартфон)
-        const handleMove = (e) => {
-            if (e.buttons === 1 || e.type === 'touchstart' || e.type === 'touchmove') {
-                const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-                const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-                
-                const moveX = (clientX - window.innerWidth/2) * (state.onBoard ? 0.2 : 0.1);
-                const moveY = (clientY - window.innerHeight/2) * (state.onBoard ? 0.2 : 0.1);
-                
-                state.catPos.x += moveX * 10;
-                state.catPos.y += moveY * 10;
-                state.catPos.x = Math.max(0, Math.min(8000, state.catPos.x));
-                state.catPos.y = Math.max(0, Math.min(8000, state.catPos.y));
-                
+        // Управление мышью (ПК)
+        let isMouseDown = false;
+        window.addEventListener('mousedown', () => isMouseDown = true);
+        window.addEventListener('mouseup', () => isMouseDown = false);
+        window.addEventListener('mousemove', (e) => {
+            if (isMouseDown) {
+                state.catPos.x += (e.clientX - window.innerWidth/2) * 0.05 * 10;
+                state.catPos.y += (e.clientY - window.innerHeight/2) * 0.05 * 10;
                 updateCamera();
-                if(e.type === 'touchstart') tg.HapticFeedback.impactOccurred('light');
             }
-        };
+        });
 
-        window.addEventListener('mousedown', handleMove);
-        window.addEventListener('mousemove', handleMove);
-        window.addEventListener('touchstart', handleMove);
-        window.addEventListener('touchmove', handleMove);
-
-        function resetPos() { state.catPos = {x: 4000, y: 4000}; updateCamera(); }
-        
-        function toggleBoard() {
-            state.onBoard = !state.onBoard;
-            cat.innerText = state.onBoard ? '🚀' : '🐈‍⬛';
-            tg.HapticFeedback.notificationOccurred('success');
-        }
-
-        function spawnBoss() {
-            const b = document.createElement('div');
-            b.className = 'entity boss'; b.innerHTML = '👾';
-            b.style.left = '4000px'; b.style.top = '4000px';
-            b.onclick = () => {
-                state.bossHp -= 500; state.score += 1000;
-                tg.HapticFeedback.impactOccurred('medium'); updateUI();
-            };
-            world.appendChild(b);
-        }
-
-        function inviteFriends() {
-            tg.openTelegramLink(`https://t.me со мной!`);
+        function renderTree(x, y) {
+            const t = document.createElement('div'); t.className = 'tree';
+            t.style.left = x+'px'; t.style.top = y+'px'; world.appendChild(t);
         }
 
         init();
     </script>
 </body>
 </html>
+
 
 
