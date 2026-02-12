@@ -4,133 +4,107 @@ html
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>CyberCat: RTX Edition v53</title>
-    <!-- ИСПОЛЬЗУЕМ САМЫЙ СТАБИЛЬНЫЙ CDN ДЛЯ PC -->
-    <script src="https://unpkg.com"></script>
+    <title>CyberCat: Fix v54</title>
+    <!-- ЗАГРУЖАЕМ БИБЛИОТЕКИ В ПЕРВУЮ ОЧЕРЕДЬ -->
+    <script src="https://cdnjs.cloudflare.com"></script>
     <script src="https://telegram.org"></script>
     <style>
-        body { margin: 0; background: #000; overflow: hidden; font-family: 'Segoe UI', sans-serif; }
-        #ui { position: fixed; top: 15px; width: 100%; display: flex; justify-content: space-around; z-index: 100; pointer-events: none; }
-        .glass { background: rgba(0,255,204,0.15); backdrop-filter: blur(15px); border: 2px solid #00ffcc; padding: 12px 25px; border-radius: 20px; color: #00ffcc; font-weight: bold; box-shadow: 0 0 30px rgba(0,255,204,0.4); pointer-events: auto; }
-        #gpu-tag { position: fixed; bottom: 10px; right: 10px; color: #00ffcc; font-size: 10px; opacity: 0.5; }
+        body { margin: 0; background: #010401; overflow: hidden; font-family: 'Segoe UI', sans-serif; }
+        #ui { position: fixed; top: 15px; width: 100%; display: flex; justify-content: space-between; z-index: 100; pointer-events: none; }
+        .glass { background: rgba(0,0,0,0.85); border: 2px solid #00ffcc; padding: 10px 25px; border-radius: 20px; color: #fff; margin: 0 15px; pointer-events: auto; box-shadow: 0 0 25px rgba(0,255,204,0.4); font-weight: bold; }
+        #error-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; color: #ff0066; display: flex; align-items: center; justify-content: center; z-index: 1000; display: none; }
     </style>
 </head>
 <body>
+    <div id="error-overlay">ОШИБКА ЗАГРУЗКИ ДВИЖКА. ОБНОВИ СТРАНИЦУ.</div>
     <div id="ui">
         <div class="glass">💰 <span id="bal">0</span> $MEOW</div>
-        <div class="glass" style="border-color:#ff0066; color:#ff0066">⚡ <span id="nrg">100</span>%</div>
+        <div class="glass" style="border-color:#ff0066">⚡ <span id="nrg">100</span>%</div>
     </div>
-    <div id="gpu-tag">GPU: RTX DETECTED | ULTRA MODE</div>
 
     <script>
-        const tg = window.Telegram?.WebApp;
-        let db = JSON.parse(localStorage.getItem('cc_v53')) || { bal: 0, nrg: 100 };
-
-        // --- ENGINE INIT ---
-        const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x02050a);
-        scene.fog = new THREE.FogExp2(0x02050a, 0.01);
-
-        const camera = new THREE.PerspectiveCamera(65, window.innerWidth / window.innerHeight, 0.1, 1000);
-        const renderer = new THREE.WebGLRenderer({ 
-            antialias: true, 
-            powerPreference: "high-performance",
-            precision: "highp"
-        });
-        
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.setPixelRatio(window.devicePixelRatio);
-        renderer.shadowMap.enabled = true;
-        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-        document.body.appendChild(renderer.domElement);
-
-        // --- ULTRA LIGHTING ---
-        const ambient = new THREE.AmbientLight(0xffffff, 0.5);
-        scene.add(ambient);
-        
-        const sun = new THREE.DirectionalLight(0xffffff, 1.5);
-        sun.position.set(20, 50, 20);
-        sun.castShadow = true;
-        sun.shadow.mapSize.width = 4096; // Для твоей 5070 Ti
-        sun.shadow.mapSize.height = 4096;
-        scene.add(sun);
-
-        // --- WORLD ---
-        const ground = new THREE.Mesh(
-            new THREE.PlaneGeometry(1000, 1000), 
-            new THREE.MeshStandardMaterial({color: 0x1a2e1a, roughness: 0.8})
-        );
-        ground.rotation.x = -Math.PI/2; ground.receiveShadow = true; scene.add(ground);
-        
-        const pond = new THREE.Mesh(
-            new THREE.CircleGeometry(15, 64), 
-            new THREE.MeshStandardMaterial({color: 0x0077ff, transparent: true, opacity: 0.7, metalness: 0.9, roughness: 0.1})
-        );
-        pond.rotation.x = -Math.PI/2; pond.position.set(-20, 0.1, -20);
-        scene.add(pond);
-
-        // --- PLAYER (CYBER CAT) ---
-        const cat = new THREE.Mesh(
-            new THREE.SphereGeometry(1, 64, 64), 
-            new THREE.MeshStandardMaterial({color: 0x00ffcc, emissive: 0x00ffcc, emissiveIntensity: 0.8})
-        );
-        cat.position.y = 1; cat.castShadow = true; scene.add(cat);
-        let target = new THREE.Vector3(0, 1, 0);
-
-        // --- FAUNA (ANIMALS) ---
-        const fauna = [];
-        for(let i=0; i<10; i++) {
-            const animal = new THREE.Mesh(
-                new THREE.BoxGeometry(1.2, 1, 1.8), 
-                new THREE.MeshStandardMaterial({color: i%2===0?0xffff00:0xffffff})
-            );
-            animal.position.set((Math.random()-0.5)*60, 0.5, (Math.random()-0.5)*60);
-            animal.castShadow = true; scene.add(animal);
-            fauna.push({mesh: animal, target: animal.position.clone()});
-        }
-
-        // --- INTERACTION ---
-        window.addEventListener('mousedown', (e) => {
-            const mouse = new THREE.Vector2((e.clientX/window.innerWidth)*2-1, -(e.clientY/window.innerHeight)*2+1);
-            const ray = new THREE.Raycaster();
-            ray.setFromCamera(mouse, camera);
-            const hit = ray.intersectObject(ground);
-            if(hit.length > 0) {
-                target.copy(hit.point).y = 1;
-                if(db.nrg > 1) { db.bal += 1; db.nrg -= 0.5; save(); }
+        // --- ПРОВЕРКА ЗАГРУЗКИ (BOOTLOADER) ---
+        function startEngine() {
+            if (typeof THREE === 'undefined') {
+                document.getElementById('error-overlay').style.display = 'flex';
+                return;
             }
-        });
 
-        function save() {
-            localStorage.setItem('cc_v53', JSON.stringify(db));
-            document.getElementById('bal').innerText = Math.floor(db.bal);
-            document.getElementById('nrg').innerText = Math.floor(db.nrg);
-        }
+            const tg = window.Telegram?.WebApp;
+            let db = JSON.parse(localStorage.getItem('cc_v54')) || { bal: 0, nrg: 100 };
 
-        function animate() {
-            requestAnimationFrame(animate);
-            cat.position.lerp(target, 0.1);
+            // --- SCENE SETUP ---
+            const scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x020502);
             
-            fauna.forEach(a => {
-                if(Math.random() > 0.99) a.target.set((Math.random()-0.5)*80, 0.5, (Math.random()-0.5)*80);
-                a.mesh.position.lerp(a.target, 0.015);
-                a.mesh.lookAt(a.target);
+            const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+            const renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(window.devicePixelRatio);
+            document.body.appendChild(renderer.domElement);
+
+            // --- LIGHTING ---
+            const ambient = new THREE.AmbientLight(0xffffff, 1.2);
+            scene.add(ambient);
+            const sun = new THREE.DirectionalLight(0xffffff, 1);
+            sun.position.set(10, 20, 10);
+            scene.add(sun);
+
+            // --- WORLD ---
+            const ground = new THREE.Mesh(new THREE.PlaneGeometry(1000, 1000), new THREE.MeshStandardMaterial({color: 0x1a2e1a}));
+            ground.rotation.x = -Math.PI/2;
+            scene.add(ground);
+
+            const cat = new THREE.Mesh(new THREE.SphereGeometry(1, 32, 32), new THREE.MeshStandardMaterial({color: 0x00ffcc, emissive: 0x00ffcc, emissiveIntensity: 0.5}));
+            cat.position.y = 1;
+            scene.add(cat);
+
+            // --- AI ANIMALS ---
+            const fauna = [];
+            for(let i=0; i<6; i++) {
+                const animal = new THREE.Mesh(new THREE.BoxGeometry(1.2, 1, 1.5), new THREE.MeshStandardMaterial({color: i%2===0?0xffff00:0xffffff}));
+                animal.position.set(Math.random()*40-20, 0.5, Math.random()*40-20);
+                scene.add(animal);
+                fauna.push({mesh: animal, target: animal.position.clone()});
+            }
+
+            camera.position.set(0, 20, 25);
+            camera.lookAt(0, 0, 0);
+
+            let target = new THREE.Vector3(0, 1, 0);
+
+            window.addEventListener('mousedown', (e) => {
+                const mouse = new THREE.Vector2((e.clientX/window.innerWidth)*2-1, -(e.clientY/window.innerHeight)*2+1);
+                const ray = new THREE.Raycaster();
+                ray.setFromCamera(mouse, camera);
+                const hit = ray.intersectObject(ground);
+                if(hit.length > 0) target.copy(hit.point).y = 1;
             });
 
-            if(db.nrg < 100) db.nrg += 0.02;
+            function save() {
+                localStorage.setItem('cc_v54', JSON.stringify(db));
+                document.getElementById('bal').innerText = Math.floor(db.bal);
+                document.getElementById('nrg').innerText = Math.floor(db.nrg);
+            }
 
-            camera.position.lerp(new THREE.Vector3(cat.position.x, 30, cat.position.z + 35), 0.05);
-            camera.lookAt(cat.position);
-            renderer.render(scene, camera);
+            function animate() {
+                requestAnimationFrame(animate);
+                cat.position.lerp(target, 0.1);
+                fauna.forEach(a => {
+                    if(Math.random() > 0.99) a.target.set(Math.random()*60-30, 0.5, Math.random()*60-30);
+                    a.mesh.position.lerp(a.target, 0.01);
+                    a.mesh.lookAt(a.target);
+                });
+                camera.position.lerp(new THREE.Vector3(cat.position.x, 20, cat.position.z + 25), 0.05);
+                camera.lookAt(cat.position);
+                renderer.render(scene, camera);
+            }
+
+            save(); animate(); tg?.ready();
         }
 
-        window.addEventListener('resize', () => {
-            renderer.setSize(window.innerWidth, window.innerHeight);
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-        });
-
-        save(); animate(); tg?.ready();
+        // Запуск только после полной загрузки страницы
+        window.onload = startEngine;
     </script>
 </body>
 </html>
