@@ -3,51 +3,55 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>CyberCat v80.8 - TOTAL FIX</title>
-    <!-- ИСПОЛЬЗУЕМ САМЫЙ НАДЕЖНЫЙ CDN ОТ GOOGLE/CLOUDFLARE -->
+    <title>CyberCat v80.9 - GUARANTEED START</title>
+    <!-- ИСПОЛЬЗУЕМ САМЫЙ НАДЕЖНЫЙ CDN -->
     <script src="https://cdnjs.cloudflare.com"></script>
     <style>
-        body { margin: 0; background: #000; overflow: hidden; font-family: sans-serif; color: #00ffcc; touch-action: none; }
+        body { margin: 0; background: #000; overflow: hidden; font-family: 'Courier New', monospace; color: #00ffcc; touch-action: none; }
         #ui { position: fixed; top: 15px; width: 100%; display: flex; justify-content: space-around; z-index: 100; pointer-events: none; }
-        .glass { background: rgba(0,255,200,0.15); border: 1px solid #00ffcc; padding: 10px 15px; border-radius: 12px; color: #fff; pointer-events: auto; backdrop-filter: blur(5px); font-size: 14px; text-align: center; box-shadow: 0 0 10px rgba(0,255,200,0.2); }
+        .glass { background: rgba(0,255,200,0.1); border: 1px solid #00ffcc; padding: 10px 15px; border-radius: 12px; color: #fff; pointer-events: auto; backdrop-filter: blur(5px); font-size: 14px; text-align: center; }
         .btn-panel { position: fixed; bottom: 20px; width: 100%; display: flex; justify-content: center; gap: 10px; z-index: 100; pointer-events: none; }
         .action-btn { background: #00ffcc; color: #000; border: none; padding: 12px 20px; border-radius: 10px; font-weight: bold; cursor: pointer; pointer-events: auto; }
         #energy-bar { width: 80px; height: 6px; background: #111; border-radius: 3px; margin-top: 5px; border: 1px solid #00ffcc; overflow: hidden; }
         #energy-fill { height: 100%; background: #00ffcc; width: 100%; transition: 0.3s; }
+        #boot-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; color: #0f0; display: flex; align-items: center; justify-content: center; z-index: 999; text-align: center; }
     </style>
 </head>
 <body>
 
-    <div id="ui">
+    <div id="boot-screen">INITIALIZING CYBERCAT ENGINE...<br>IF SCREEN STAYS BLACK, CHECK INTERNET.</div>
+
+    <div id="ui" style="display:none">
         <div class="glass">💰 <span id="bal">0</span> $MEOW<br><div id="energy-bar"><div id="energy-fill"></div></div></div>
         <div class="glass">🌾 STOCK: <span id="inv">0</span></div>
     </div>
 
-    <div class="btn-panel">
+    <div class="btn-panel" style="display:none">
         <button class="action-btn" onclick="window.placeBuilding()">BUILD (500)</button>
         <button class="action-btn" onclick="window.sellAll()" style="background:#ff0066; color:#fff">SELL (10% FEE)</button>
     </div>
 
     <script>
-        // Ждем загрузки движка
-        window.onload = function() {
+        // ГЛОБАЛЬНЫЙ ЗАПУСК
+        window.addEventListener('load', function() {
             if (typeof THREE === 'undefined') {
-                alert("Ошибка: Движок Three.js не загружен. Проверьте интернет!");
+                document.getElementById('boot-screen').innerHTML = "<span style='color:red'>ERROR: THREE.JS NOT LOADED.<br>PLEASE CHECK YOUR CONNECTION.</span>";
                 return;
             }
-            initCyberCat();
-        };
+            document.getElementById('boot-screen').style.display = 'none';
+            document.getElementById('ui').style.display = 'flex';
+            document.querySelector('.btn-panel').style.display = 'flex';
+            initGame();
+        });
 
         let db, scene, camera, renderer, player, ground, npcs = [];
         let targetPos = new THREE.Vector3(0, 0.8, 0);
 
-        function initCyberCat() {
-            // Восстановление данных
+        function initGame() {
             db = JSON.parse(localStorage.getItem('cybercat_v80_final')) || { 
                 bal: 100, inv: 0, nrg: 100, buildings: [] 
             };
 
-            // Сцена
             scene = new THREE.Scene();
             scene.background = new THREE.Color(0x010505);
             camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 0.1, 1000);
@@ -60,22 +64,18 @@
             sun.position.set(10, 20, 10);
             scene.add(sun);
 
-            // Земля и сетка
             ground = new THREE.Mesh(new THREE.PlaneGeometry(1000, 1000), new THREE.MeshStandardMaterial({color: 0x050505}));
             ground.rotation.x = -Math.PI/2;
             scene.add(ground);
             scene.add(new THREE.GridHelper(1000, 50, 0x00ffcc, 0x111111));
 
-            // Игрок
-            player = new THREE.Mesh(new THREE.SphereGeometry(0.8, 16, 16), new THREE.MeshStandardMaterial({color: 0x00ffcc, emissive: 0x00ffcc}));
+            player = new THREE.Mesh(new THREE.IcosahedronGeometry(0.8, 1), new THREE.MeshStandardMaterial({color: 0x00ffcc, emissive: 0x00ffcc}));
             player.position.y = 0.8;
             scene.add(player);
 
-            // Боты и здания
             for(let i=0; i<10; i++) spawnNPC();
             db.buildings.forEach(p => createBuildingMesh(p));
 
-            // Клик для движения
             window.addEventListener('pointerdown', (e) => {
                 const mouse = new THREE.Vector2((e.clientX/window.innerWidth)*2-1, -(e.clientY/window.innerHeight)*2+1);
                 const ray = new THREE.Raycaster();
@@ -90,7 +90,7 @@
 
         function spawnNPC() {
             const n = new THREE.Mesh(new THREE.BoxGeometry(1.5, 1, 2), new THREE.MeshStandardMaterial({color: 0xffffff, wireframe: true}));
-            n.position.set(Math.random()*80-40, 0.5, Math.random()*80-40);
+            n.position.set(Math.random()*60-30, 0.5, Math.random()*60-30);
             scene.add(n);
             npcs.push(n);
         }
@@ -120,7 +120,7 @@
 
         window.sellAll = () => {
             if(db.inv > 0) {
-                db.bal += (db.inv * 10) * 0.9; // ТВОЯ КОМИССИЯ 10%
+                db.bal += (db.inv * 10) * 0.9; // 10% TAX
                 db.inv = 0;
                 updateUI();
             }
