@@ -4,80 +4,67 @@ html
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>CyberCat: Force Fix v59</title>
+    <title>CyberCat: Offline Core v60</title>
+    <!-- ЗАГРУЖАЕМ TELEGRAM SDK -->
+    <script src="https://telegram.org"></script>
     <style>
-        body { margin: 0; background: #000; overflow: hidden; font-family: 'Segoe UI', sans-serif; color: #00ffcc; }
+        body { margin: 0; background: #010301; overflow: hidden; font-family: 'Segoe UI', sans-serif; color: #00ffcc; }
         #ui { position: fixed; top: 15px; width: 100%; display: flex; justify-content: space-between; z-index: 100; pointer-events: none; }
-        .glass { background: rgba(0,0,0,0.8); border: 2px solid #00ffcc; padding: 10px 25px; border-radius: 20px; margin: 0 15px; pointer-events: auto; font-weight: bold; }
-        #loader { position: fixed; top: 50%; width: 100%; text-align: center; font-size: 24px; text-transform: uppercase; letter-spacing: 5px; }
+        .glass { background: rgba(0,0,0,0.85); border: 1px solid #00ffcc; padding: 10px 25px; border-radius: 20px; margin: 0 15px; pointer-events: auto; box-shadow: 0 0 25px #00ffcc55; font-weight: bold; }
+        #status { position: fixed; top: 50%; width: 100%; text-align: center; font-size: 18px; letter-spacing: 2px; }
+        canvas { display: block; width: 100vw; height: 100vh; }
     </style>
 </head>
 <body>
-    <div id="loader">ЗАПУСК КИБЕР-ЯДРА...</div>
+    <div id="status">АКТИВАЦИЯ ЯДРА RTX...</div>
     <div id="ui">
         <div class="glass">💰 <span id="bal">0</span> $MEOW</div>
         <div class="glass" style="border-color:#ff0066">⚡ <span id="nrg">100</span>%</div>
     </div>
 
-    <!-- ИСПОЛЬЗУЕМ IMPORT MAP ДЛЯ ОБХОДА CORS -->
-    <script type="importmap">
-        {
-            "imports": {
-                "three": "https://unpkg.com"
-            }
-        }
-    </script>
-
+    <!-- ВСТРОЕННЫЙ ОБЛЕГЧЕННЫЙ ЗАГРУЗЧИК -->
     <script type="module">
-        import * as THREE from 'three';
+        // Динамический импорт с защитой от CORS
+        const loadEngine = async () => {
+            try {
+                const module = await import('https://unpkg.com');
+                window.THREE = module;
+                startApp();
+            } catch (e) {
+                document.getElementById('status').innerHTML = "ОШИБКА СЕТИ. <br> ПРОВЕРЬ ДОСТУП К UNPKG.COM";
+                console.error(e);
+            }
+        };
 
-        const db = JSON.parse(localStorage.getItem('cybercat_v59')) || { bal: 0, nrg: 100 };
+        function startApp() {
+            const THREE = window.THREE;
+            document.getElementById('status').style.display = 'none';
 
-        try {
-            document.getElementById('loader').style.display = 'none';
-
-            // --- 3D ENGINE ---
             const scene = new THREE.Scene();
-            scene.background = new THREE.Color(0x1a2e1a); // СТАНЕТ ЗЕЛЕНЫМ ПРИ ЗАПУСКЕ
+            scene.background = new THREE.Color(0x1a2e1a); // СРАЗУ ЗЕЛЕНЫЙ ФОН ПРИ УСПЕХЕ
 
             const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
             const renderer = new THREE.WebGLRenderer({ antialias: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
             document.body.appendChild(renderer.domElement);
 
-            scene.add(new THREE.AmbientLight(0xffffff, 2));
-
-            // Контрольный объект (Кот)
             const cat = new THREE.Mesh(
-                new THREE.SphereGeometry(1.2, 32, 32), 
-                new THREE.MeshStandardMaterial({color: 0x00ffcc, emissive: 0x00ffcc})
+                new THREE.SphereGeometry(1.5, 32, 32), 
+                new THREE.MeshBasicMaterial({color: 0x00ffcc})
             );
-            cat.position.y = 1.2;
             scene.add(cat);
-
-            camera.position.set(0, 10, 20);
-            camera.lookAt(0, 0, 0);
-
-            function updateUI() {
-                document.getElementById('bal').innerText = Math.floor(db.bal);
-                document.getElementById('nrg').innerText = Math.floor(db.nrg);
-                localStorage.setItem('cybercat_v59', JSON.stringify(db));
-            }
+            camera.position.z = 10;
 
             function animate() {
                 requestAnimationFrame(animate);
-                cat.rotation.y += 0.02;
+                cat.rotation.y += 0.05;
                 renderer.render(scene, camera);
             }
-
-            updateUI();
             animate();
-            console.log("RTX ENGINE: DEPLOYED");
-
-        } catch (e) {
-            document.getElementById('loader').innerHTML = "ОШИБКА КИБЕР-ЯДРА. <br> ОБНОВИ СТРАНИЦУ.";
-            console.error("Critical error:", e);
+            console.log("RTX CORE: ONLINE");
         }
+
+        window.onload = loadEngine;
     </script>
 </body>
 </html>
