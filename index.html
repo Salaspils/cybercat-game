@@ -9,61 +9,48 @@ html
     <style>
         :root { --neon: #00ffcc; --gold: #ffcc00; --pink: #ff0066; }
         body { background: #000; color: #fff; font-family: 'Inter', sans-serif; margin: 0; overflow: hidden; touch-action: none; }
-        
         #viewport { width: 100vw; height: 100vh; position: relative; overflow: hidden; }
         #sky { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; transition: 5s ease; }
         #stars { position: absolute; width: 100%; height: 100%; z-index: 1; opacity: 0; transition: 5s; }
-
         #world { 
             position: absolute; width: 6000px; height: 6000px; z-index: 10;
             background-color: #1a4d2e; background-image: url('https://www.transparenttextures.com');
             box-shadow: inset 0 0 500px rgba(0,0,0,0.8); transition: 5s ease;
         }
-
         #cat { 
             position: absolute; width: 110px; height: 110px; z-index: 1000; transform: translate(-50%, -50%);
             background: url('https://media.giphy.com') no-repeat center;
             background-size: contain; filter: drop-shadow(0 0 20px var(--neon)); transition: 0.1s linear;
         }
-
         .tree { position: absolute; width: 180px; height: 240px; background: url('https://pngimg.com') no-repeat center; background-size: contain; transform: translate(-50%, -90%); z-index: 800; filter: drop-shadow(25px 45px 15px rgba(0,0,0,0.4)); }
         .entity { position: absolute; transform: translate(-50%, -50%); z-index: 500; cursor: pointer; background-size: contain; background-repeat: no-repeat; }
         .boss { width: 250px; height: 250px; background-image: url('https://media.giphy.com'); filter: hue-rotate(280deg) brightness(1.5); }
-
         .ui { position: fixed; background: rgba(0,0,0,0.85); border: 1px solid var(--neon); padding: 15px; border-radius: 25px; z-index: 6000; }
     </style>
 </head>
 <body>
     <div id="sky"><canvas id="stars"></canvas></div>
     <div id="viewport"><div id="world"><div id="cat"></div></div></div>
-    
     <div class="ui" style="top: 15px; left: 15px;">💰 <b id="bal">5,000</b><br><small id="time">День: 12:00</small></div>
     <div class="ui" style="top: 15px; right: 15px; border-color:var(--pink)">👾 BOSS HP: <b id="hp">1M</b></div>
-
     <script>
         const tg = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp : { expand:()=>{}, ready:()=>{} };
         let st = { x: 3000, y: 3000, score: 5000, hp: 1000000, hour: 12 };
         const world = document.getElementById('world');
         const cat = document.getElementById('cat');
-
         function init() {
-            // Звезды
             const c = document.getElementById('stars'); const ctx = c.getContext('2d');
             c.width = window.innerWidth; c.height = window.innerHeight;
             ctx.fillStyle = "#fff"; for(let i=0; i<200; i++) ctx.fillRect(Math.random()*c.width, Math.random()*c.height, 2, 2);
-            
-            // Деревья
             for(let i=0; i<50; i++) {
                 const t = document.createElement('div'); t.className = 'tree';
                 t.style.left = (Math.random()*5600+200)+'px'; t.style.top = (Math.random()*5600+200)+'px';
                 world.appendChild(t);
             }
-            
             spawnBoss(); update();
-            setInterval(tick, 10000); // 1 час за 10 сек (для теста)
+            setInterval(tick, 10000); // 1 игровой час = 10 секунд
             tg.ready();
         }
-
         function tick() {
             st.hour = (st.hour + 1) % 24; const night = st.hour >= 20 || st.hour <= 6;
             document.getElementById('time').innerText = `Время: ${st.hour}:00`;
@@ -71,26 +58,22 @@ html
             world.style.backgroundColor = night ? "#0a1f0f" : "#1a4d2e";
             document.getElementById('stars').style.opacity = night ? "1" : "0";
         }
-
         function update() {
             cat.style.left = st.x + 'px'; cat.style.top = st.y + 'px';
             world.style.transform = `translate(${-st.x + window.innerWidth/2}px, ${-st.y + window.innerHeight/2}px)`;
             document.getElementById('bal').innerText = st.score.toLocaleString();
             document.getElementById('hp').innerText = (st.hp/1000).toFixed(0) + 'K';
         }
-
         window.addEventListener('mousedown', (e) => {
             if(e.target.closest('.ui')) return;
             const r = world.getBoundingClientRect(); st.x = e.clientX - r.left; st.y = e.clientY - r.top; update();
         });
-
         function spawnBoss() {
             const b = document.createElement('div'); b.className = 'entity boss';
             b.style.left = '3000px'; b.style.top = '3000px';
             b.onclick = () => { st.hp -= 5000; st.score += 1000; update(); };
             world.appendChild(b);
         }
-
         init();
     </script>
 </body>
