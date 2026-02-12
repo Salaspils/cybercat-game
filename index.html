@@ -4,31 +4,24 @@ html
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>CyberCat v80.5 - FINAL RECOVERY</title>
-    
-    <!-- ПОЛНАЯ ССЫЛКА (CDN), КОТОРАЯ ВСЕГДА РАБОТАЕТ -->
-    <script src="https://ajax.googleapis.com"></script>
-
+    <title>CyberCat v80.6 - FIX</title>
+    <!-- ПРОВЕРЕННАЯ ССЫЛКА НА ДВИЖОК -->
+    <script src="https://cdnjs.cloudflare.com"></script>
     <style>
         body { margin: 0; background: #010505; overflow: hidden; font-family: 'Courier New', monospace; color: #00ffcc; touch-action: none; }
-        #ui { position: fixed; top: 15px; width: 100%; display: flex; flex-direction: column; gap: 10px; z-index: 100; pointer-events: none; }
-        .row { display: flex; justify-content: space-around; padding: 0 10px; }
-        .glass { background: rgba(0,20,0,0.8); border: 1px solid #00ffcc; padding: 10px 15px; border-radius: 15px; color: #fff; pointer-events: auto; box-shadow: 0 0 15px #00ffcc44; backdrop-filter: blur(10px); font-size: 12px; }
+        #ui { position: fixed; top: 15px; width: 100%; display: flex; justify-content: space-around; z-index: 100; pointer-events: none; }
+        .glass { background: rgba(0,20,0,0.8); border: 1px solid #00ffcc; padding: 10px 15px; border-radius: 12px; color: #fff; pointer-events: auto; font-size: 12px; }
         .btn-panel { position: fixed; bottom: 20px; width: 100%; display: flex; justify-content: center; gap: 10px; z-index: 100; pointer-events: none; }
-        .action-btn { background: #ff0066; color: #fff; border: none; padding: 12px 15px; border-radius: 12px; font-weight: bold; cursor: pointer; pointer-events: auto; box-shadow: 0 0 15px #ff006666; font-size: 11px; }
+        .action-btn { background: #ff0066; color: #fff; border: none; padding: 12px 15px; border-radius: 10px; font-weight: bold; cursor: pointer; pointer-events: auto; }
         #energy-bar { width: 80px; height: 6px; background: #111; border-radius: 3px; margin-top: 5px; border: 1px solid #00ffcc; overflow: hidden; }
         #energy-fill { height: 100%; background: #00ffcc; width: 100%; transition: 0.3s; }
-        #error-msg { position: fixed; top: 50%; width: 100%; text-align: center; color: red; display: none; z-index: 999; }
     </style>
 </head>
 <body>
-    <div id="error-msg">ОШИБКА ЗАГРУЗКИ ДВИЖКА! ПРОВЕРЬ ИНТЕРНЕТ.</div>
 
     <div id="ui">
-        <div class="row">
-            <div class="glass">💰 <span id="bal">0</span> $MEOW<br><div id="energy-bar"><div id="energy-fill"></div></div></div>
-            <div class="glass">🌾 STOCK: <span id="inv">0</span></div>
-        </div>
+        <div class="glass">💰 <span id="bal">0</span> $MEOW<br><div id="energy-bar"><div id="energy-fill"></div></div></div>
+        <div class="glass">🌾 STOCK: <span id="inv">0</span></div>
     </div>
 
     <div class="btn-panel">
@@ -37,15 +30,19 @@ html
     </div>
 
     <script>
-        // Проверка: загрузилась ли библиотека?
-        if (typeof THREE === 'undefined') {
-            document.getElementById('error-msg').style.display = 'block';
-        }
+        // ЖДЕМ ПОЛНУЮ ЗАГРУЗКУ СТРАНИЦЫ И БИБЛИОТЕКИ
+        window.onload = function() {
+            if (typeof THREE === 'undefined') {
+                alert("Ошибка: Библиотека Three.js не загружена. Проверь интернет!");
+                return;
+            }
+            initGame();
+        };
 
         let db, scene, camera, renderer, player, ground, npcs = [];
         let targetPos = new THREE.Vector3(0, 0.8, 0);
 
-        function init() {
+        function initGame() {
             db = JSON.parse(localStorage.getItem('cybercat_v80_final')) || { 
                 bal: 100, inv: 0, nrg: 100, buildings: [] 
             };
@@ -53,23 +50,25 @@ html
             scene = new THREE.Scene();
             scene.background = new THREE.Color(0x010505);
             camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 0.1, 1000);
+            
             renderer = new THREE.WebGLRenderer({ antialias: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
             document.body.appendChild(renderer.domElement);
 
-            const sun = new THREE.DirectionalLight(0x00ffcc, 1);
-            sun.position.set(10, 20, 10);
-            scene.add(sun, new THREE.AmbientLight(0x224422));
+            scene.add(new THREE.AmbientLight(0x444444));
+            const light = new THREE.DirectionalLight(0x00ffcc, 1);
+            light.position.set(10, 20, 10);
+            scene.add(light);
 
             ground = new THREE.Mesh(new THREE.PlaneGeometry(1000, 1000), new THREE.MeshStandardMaterial({color: 0x050505}));
             ground.rotation.x = -Math.PI/2;
             scene.add(ground, new THREE.GridHelper(1000, 50, 0x00ffcc, 0x111111));
 
-            player = new THREE.Mesh(new THREE.IcosahedronGeometry(0.8, 1), new THREE.MeshStandardMaterial({color: 0x00ffcc, emissive: 0x00ffcc}));
+            player = new THREE.Mesh(new THREE.IcosahedronGeometry(0.8, 1), new THREE.MeshStandardMaterial({color: 0x00ffcc}));
             player.position.y = 0.8;
             scene.add(player);
 
-            for(let i=0; i<12; i++) spawnNPC();
+            for(let i=0; i<10; i++) spawnNPC();
             db.buildings.forEach(renderB);
 
             window.addEventListener('pointerdown', (e) => {
@@ -77,7 +76,7 @@ html
                 const ray = new THREE.Raycaster();
                 ray.setFromCamera(mouse, camera);
                 const hit = ray.intersectObject(ground);
-                if(hit.length > 0) targetPos.copy(hit[0].point).y = 0.8;
+                if(hit.length > 0) targetPos.copy(hit.point).y = 0.8;
             });
 
             updateUI();
@@ -86,13 +85,13 @@ html
 
         function spawnNPC() {
             const n = new THREE.Mesh(new THREE.BoxGeometry(1.5, 1, 2), new THREE.MeshStandardMaterial({color: 0xffffff, wireframe: true}));
-            n.position.set(Math.random()*100-50, 0.5, Math.random()*100-50);
+            n.position.set(Math.random()*60-30, 0.5, Math.random()*60-30);
             scene.add(n);
             npcs.push(n);
         }
 
         function renderB(pos) {
-            const b = new THREE.Mesh(new THREE.BoxGeometry(6, 4, 6), new THREE.MeshStandardMaterial({color: 0x00ffcc, wireframe: true}));
+            const b = new THREE.Mesh(new THREE.BoxGeometry(5, 4, 5), new THREE.MeshStandardMaterial({color: 0x00ffcc, wireframe: true}));
             b.position.set(pos.x, 2, pos.z);
             scene.add(b);
         }
@@ -116,7 +115,7 @@ html
 
         window.sellAll = () => {
             if(db.inv > 0) {
-                db.bal += (db.inv * 10) * 0.9; // 10% налог учтен
+                db.bal += (db.inv * 10) * 0.9;
                 db.inv = 0;
                 updateUI();
             }
@@ -128,13 +127,13 @@ html
             
             npcs.forEach(n => {
                 const dist = n.position.distanceTo(player.position);
-                if(dist < 12) {
+                if(dist < 10) {
                     const dir = n.position.clone().sub(player.position).normalize();
-                    n.position.add(dir.multiplyScalar(0.08));
+                    n.position.add(dir.multiplyScalar(0.06));
                 }
                 if(dist < 2.5 && db.nrg >= 1) {
                     db.inv++; db.nrg -= 1;
-                    n.position.set(Math.random()*150-75, 0.5, Math.random()*150-75);
+                    n.position.set(Math.random()*100-50, 0.5, Math.random()*100-50);
                     updateUI();
                 }
             });
@@ -144,8 +143,6 @@ html
             camera.lookAt(player.position);
             renderer.render(scene, camera);
         }
-
-        window.onload = init;
     </script>
 </body>
 </html>
