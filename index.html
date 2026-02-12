@@ -4,17 +4,17 @@ html
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>CyberCat v80.6 - FIX</title>
-    <!-- ПРОВЕРЕННАЯ ССЫЛКА НА ДВИЖОК -->
+    <title>CyberCat v80.7 - HARD FIX</title>
+    <!-- ИСПОЛЬЗУЕМ САМЫЙ СТАБИЛЬНЫЙ CDN ОТ CLOUDFLARE -->
     <script src="https://cdnjs.cloudflare.com"></script>
     <style>
-        body { margin: 0; background: #010505; overflow: hidden; font-family: 'Courier New', monospace; color: #00ffcc; touch-action: none; }
+        body { margin: 0; background: #000; overflow: hidden; font-family: 'Segoe UI', sans-serif; color: #00ffcc; touch-action: none; }
         #ui { position: fixed; top: 15px; width: 100%; display: flex; justify-content: space-around; z-index: 100; pointer-events: none; }
-        .glass { background: rgba(0,20,0,0.8); border: 1px solid #00ffcc; padding: 10px 15px; border-radius: 12px; color: #fff; pointer-events: auto; font-size: 12px; }
+        .glass { background: rgba(0,255,200,0.1); border: 1px solid #00ffcc; padding: 10px 15px; border-radius: 12px; color: #fff; pointer-events: auto; backdrop-filter: blur(5px); font-size: 14px; text-align: center; }
         .btn-panel { position: fixed; bottom: 20px; width: 100%; display: flex; justify-content: center; gap: 10px; z-index: 100; pointer-events: none; }
-        .action-btn { background: #ff0066; color: #fff; border: none; padding: 12px 15px; border-radius: 10px; font-weight: bold; cursor: pointer; pointer-events: auto; }
+        .action-btn { background: #00ffcc; color: #000; border: none; padding: 12px 20px; border-radius: 10px; font-weight: bold; cursor: pointer; pointer-events: auto; box-shadow: 0 0 15px #00ffcc66; }
         #energy-bar { width: 80px; height: 6px; background: #111; border-radius: 3px; margin-top: 5px; border: 1px solid #00ffcc; overflow: hidden; }
-        #energy-fill { height: 100%; background: #00ffcc; width: 100%; transition: 0.3s; }
+        #energy-fill { height: 100%; background: #00ffcc; width: 100%; }
     </style>
 </head>
 <body>
@@ -25,58 +25,67 @@ html
     </div>
 
     <div class="btn-panel">
-        <button class="action-btn" onclick="window.placeBuilding()" style="background:#00ffcc; color:#000">🏗️ BUILD (500)</button>
-        <button class="action-btn" onclick="window.sellAll()">🏪 SELL (10% FEE)</button>
+        <button class="action-btn" onclick="window.placeBuilding()">BUILD (500)</button>
+        <button class="action-btn" onclick="window.sellAll()" style="background:#ff0066; color:#fff">SELL (10% FEE)</button>
     </div>
 
     <script>
-        // ЖДЕМ ПОЛНУЮ ЗАГРУЗКУ СТРАНИЦЫ И БИБЛИОТЕКИ
+        // Проверка загрузки библиотеки перед стартом
         window.onload = function() {
             if (typeof THREE === 'undefined') {
-                alert("Ошибка: Библиотека Three.js не загружена. Проверь интернет!");
+                alert("Движок Three.js не загружен! Проверьте интернет-соединение.");
                 return;
             }
-            initGame();
+            startCyberCat();
         };
 
         let db, scene, camera, renderer, player, ground, npcs = [];
         let targetPos = new THREE.Vector3(0, 0.8, 0);
 
-        function initGame() {
+        function startCyberCat() {
+            // Загрузка данных
             db = JSON.parse(localStorage.getItem('cybercat_v80_final')) || { 
                 bal: 100, inv: 0, nrg: 100, buildings: [] 
             };
 
+            // Инициализация сцены
             scene = new THREE.Scene();
             scene.background = new THREE.Color(0x010505);
             camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 0.1, 1000);
-            
             renderer = new THREE.WebGLRenderer({ antialias: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
             document.body.appendChild(renderer.domElement);
 
-            scene.add(new THREE.AmbientLight(0x444444));
+            // Свет
+            scene.add(new THREE.AmbientLight(0x404040));
             const light = new THREE.DirectionalLight(0x00ffcc, 1);
             light.position.set(10, 20, 10);
             scene.add(light);
 
+            // Мир
             ground = new THREE.Mesh(new THREE.PlaneGeometry(1000, 1000), new THREE.MeshStandardMaterial({color: 0x050505}));
             ground.rotation.x = -Math.PI/2;
-            scene.add(ground, new THREE.GridHelper(1000, 50, 0x00ffcc, 0x111111));
+            scene.add(ground);
+            scene.add(new THREE.GridHelper(1000, 50, 0x00ffcc, 0x111111));
 
-            player = new THREE.Mesh(new THREE.IcosahedronGeometry(0.8, 1), new THREE.MeshStandardMaterial({color: 0x00ffcc}));
+            // Игрок
+            player = new THREE.Mesh(new THREE.SphereGeometry(0.8, 16, 16), new THREE.MeshStandardMaterial({color: 0x00ffcc, emissive: 0x00ffcc}));
             player.position.y = 0.8;
             scene.add(player);
 
+            // Создание ботов
             for(let i=0; i<10; i++) spawnNPC();
-            db.buildings.forEach(renderB);
+            
+            // Восстановление зданий
+            db.buildings.forEach(pos => createBuildingMesh(pos));
 
+            // Управление
             window.addEventListener('pointerdown', (e) => {
                 const mouse = new THREE.Vector2((e.clientX/window.innerWidth)*2-1, -(e.clientY/window.innerHeight)*2+1);
                 const ray = new THREE.Raycaster();
                 ray.setFromCamera(mouse, camera);
                 const hit = ray.intersectObject(ground);
-                if(hit.length > 0) targetPos.copy(hit.point).y = 0.8;
+                if(hit.length > 0) targetPos.copy(hit[0].point).y = 0.8;
             });
 
             updateUI();
@@ -85,37 +94,37 @@ html
 
         function spawnNPC() {
             const n = new THREE.Mesh(new THREE.BoxGeometry(1.5, 1, 2), new THREE.MeshStandardMaterial({color: 0xffffff, wireframe: true}));
-            n.position.set(Math.random()*60-30, 0.5, Math.random()*60-30);
+            n.position.set(Math.random()*80-40, 0.5, Math.random()*80-40);
             scene.add(n);
             npcs.push(n);
         }
 
-        function renderB(pos) {
+        function createBuildingMesh(pos) {
             const b = new THREE.Mesh(new THREE.BoxGeometry(5, 4, 5), new THREE.MeshStandardMaterial({color: 0x00ffcc, wireframe: true}));
             b.position.set(pos.x, 2, pos.z);
             scene.add(b);
         }
 
         window.updateUI = () => {
-            document.getElementById('bal').innerText = Math.floor(db.bal);
-            document.getElementById('inv').innerText = db.inv;
+            document.getElementById('bal').textContent = Math.floor(db.bal);
+            document.getElementById('inv').textContent = db.inv;
             document.getElementById('energy-fill').style.width = db.nrg + '%';
             localStorage.setItem('cybercat_v80_final', JSON.stringify(db));
-        }
+        };
 
         window.placeBuilding = () => {
             if(db.bal >= 500) {
                 db.bal -= 500;
                 const pos = {x: player.position.x, z: player.position.z};
                 db.buildings.push(pos);
-                renderB(pos);
+                createBuildingMesh(pos);
                 updateUI();
             }
         };
 
         window.sellAll = () => {
             if(db.inv > 0) {
-                db.bal += (db.inv * 10) * 0.9;
+                db.bal += (db.inv * 10) * 0.9; // 10% FEE
                 db.inv = 0;
                 updateUI();
             }
@@ -127,11 +136,11 @@ html
             
             npcs.forEach(n => {
                 const dist = n.position.distanceTo(player.position);
-                if(dist < 10) {
+                if(dist < 12) { // Flee
                     const dir = n.position.clone().sub(player.position).normalize();
-                    n.position.add(dir.multiplyScalar(0.06));
+                    n.position.add(dir.multiplyScalar(0.07));
                 }
-                if(dist < 2.5 && db.nrg >= 1) {
+                if(dist < 2.5 && db.nrg >= 1) { // Harvest
                     db.inv++; db.nrg -= 1;
                     n.position.set(Math.random()*100-50, 0.5, Math.random()*100-50);
                     updateUI();
@@ -139,6 +148,7 @@ html
             });
 
             if(db.nrg < 100) { db.nrg += 0.05; updateUI(); }
+            
             camera.position.set(player.position.x, 20, player.position.z + 25);
             camera.lookAt(player.position);
             renderer.render(scene, camera);
