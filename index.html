@@ -4,85 +4,40 @@ html
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>CyberCat: Cinematic Reality</title>
-    <script src="https://telegram.org"></script>
+    <title>CyberCat: Stable</title>
     <style>
-        :root { --neon: #00ffcc; --gold: #ffcc00; --pink: #ff0066; }
-        body { background: #000; color: #fff; font-family: 'Inter', sans-serif; margin: 0; overflow: hidden; touch-action: none; }
-        
+        :root { --neon: #00ffcc; --grass: #1a4d2e; }
+        body { background: #000; color: #fff; font-family: sans-serif; margin: 0; overflow: hidden; touch-action: none; }
         #viewport { width: 100vw; height: 100vh; position: relative; overflow: hidden; }
-        
-        /* HD GROUND - Текстура с эффектом глубины */
         #world { 
-            position: absolute; width: 6000px; height: 6000px; z-index: 10;
-            background-color: #1a4d2e;
-            background-image: 
-                url('https://www.transparenttextures.com'), 
-                url('https://www.transparenttextures.com');
-            background-blend-mode: soft-light;
-            box-shadow: inset 0 0 400px rgba(0,0,0,0.9);
-            transition: 5s ease;
+            position: absolute; width: 4000px; height: 4000px; 
+            background-color: var(--grass);
+            background-image: radial-gradient(circle, rgba(255,255,255,0.05) 1px, transparent 1px);
+            background-size: 50px 50px;
         }
-
-        /* КИНЕМАТОГРАФИЧЕСКИЙ КОТ */
+        /* Кот теперь виден всегда (используем эмодзи как временный спрайт) */
         #cat { 
-            position: absolute; width: 110px; height: 110px; z-index: 1000; 
+            position: absolute; font-size: 80px; z-index: 1000; 
             transform: translate(-50%, -50%); pointer-events: none;
-            background: url('https://media.giphy.com') no-repeat center;
-            background-size: contain;
-            filter: drop-shadow(0 10px 15px rgba(0,0,0,0.6));
+            filter: drop-shadow(0 0 15px var(--neon));
         }
-
-        /* HD РАСТИТЕЛЬНОСТЬ С ТЕНЯМИ */
         .tree { 
-            position: absolute; width: 240px; height: 320px; 
-            background: url('https://pngimg.com') no-repeat center; 
-            background-size: contain; transform: translate(-50%, -95%); z-index: 800;
-            animation: sway 7s ease-in-out infinite; transform-origin: bottom center;
-            filter: drop-shadow(30px 50px 20px rgba(0,0,0,0.4));
+            position: absolute; font-size: 100px; transform: translate(-50%, -90%); z-index: 800; 
+            filter: drop-shadow(10px 10px 5px rgba(0,0,0,0.3));
         }
-
-        @keyframes sway { 
-            0%, 100% { transform: translate(-50%, -95%) rotate(-1.2deg); } 
-            50% { transform: translate(-50%, -95%) rotate(1.2deg); } 
-        }
-
-        /* СВЕТОВЫЕ ЭФФЕКТЫ (Vignette & Bloom) */
-        #post-process { position: fixed; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index: 5000; 
-            background: radial-gradient(circle, transparent 30%, rgba(0,0,0,0.5) 100%);
-        }
-
-        .ui-panel { position: fixed; background: rgba(0,0,0,0.85); backdrop-filter: blur(20px); border: 1px solid var(--neon); padding: 15px 25px; border-radius: 25px; z-index: 6000; top: 20px; left: 20px; box-shadow: 0 15px 35px rgba(0,0,0,0.6); }
+        .ui { position: fixed; top: 20px; left: 20px; z-index: 5000; background: rgba(0,0,0,0.8); border: 2px solid var(--neon); padding: 15px; border-radius: 20px; box-shadow: 0 0 20px var(--neon); }
     </style>
 </head>
 <body>
     <div id="viewport">
-        <div id="world"><div id="cat"></div></div>
+        <div id="world"><div id="cat">🐈‍⬛</div></div>
     </div>
-    <div id="post-process"></div>
-
-    <div class="ui-panel">
-        <span style="font-size: 22px; letter-spacing: 1px;">💰 <b id="bal">5,000</b></span><br>
-        <small style="color: var(--neon); text-transform: uppercase; font-weight: 800; font-size: 9px;">Engine: Ultra HD v27.0</small>
-    </div>
+    <div class="ui">💰 <b id="bal">5,000</b></div>
 
     <script>
-        const tg = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp : { expand:()=>{}, ready:()=>{} };
-        let state = { x: 3000, y: 3000, score: 5000 };
+        const state = { x: 2000, y: 2000 };
         const world = document.getElementById('world');
         const cat = document.getElementById('cat');
-
-        function init() {
-            // Создание HD леса с разной глубиной
-            for(let i=0; i<70; i++) {
-                const el = document.createElement('div'); el.className = 'tree';
-                el.style.left = (Math.random()*5600+200)+'px'; 
-                el.style.top = (Math.random()*5600+200)+'px'; 
-                el.style.transform = `translate(-50%, -95%) scale(${0.8 + Math.random()*0.4})`;
-                world.appendChild(el);
-            }
-            update(); tg.ready(); tg.expand();
-        }
 
         function update() {
             cat.style.left = state.x + 'px';
@@ -90,16 +45,25 @@ html
             world.style.transform = `translate(${-state.x + window.innerWidth/2}px, ${-state.y + window.innerHeight/2}px)`;
         }
 
-        // Плавное следование за курсором
+        // Клик в ЛЮБОЕ место поля
         window.addEventListener('mousedown', (e) => {
-            if(e.target.closest('.ui-panel')) return;
             const rect = world.getBoundingClientRect();
             state.x = e.clientX - rect.left;
             state.y = e.clientY - rect.top;
             update();
         });
 
-        init();
+        // Создаем "лес" (эмодзи-деревья не требуют загрузки)
+        for(let i=0; i<40; i++) {
+            const t = document.createElement('div'); 
+            t.className = 'tree'; 
+            t.innerText = Math.random() > 0.5 ? '🌳' : '🌲';
+            t.style.left = (Math.random()*3600+200)+'px'; 
+            t.style.top = (Math.random()*3600+200)+'px'; 
+            world.appendChild(t);
+        }
+
+        update();
     </script>
 </body>
 </html>
