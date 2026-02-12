@@ -4,54 +4,50 @@ html
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>CyberCat: Fix v54</title>
-    <!-- ЗАГРУЖАЕМ БИБЛИОТЕКИ В ПЕРВУЮ ОЧЕРЕДЬ -->
-    <script src="https://cdnjs.cloudflare.com"></script>
+    <title>CyberCat: Direct v55</title>
+    <!-- ИСПОЛЬЗУЕМ САМЫЙ НАДЕЖНЫЙ CDN -->
+    <script src="https://cdn.jsdelivr.net"></script>
     <script src="https://telegram.org"></script>
     <style>
-        body { margin: 0; background: #010401; overflow: hidden; font-family: 'Segoe UI', sans-serif; }
+        body { margin: 0; background: #020502; overflow: hidden; font-family: 'Segoe UI', sans-serif; }
         #ui { position: fixed; top: 15px; width: 100%; display: flex; justify-content: space-between; z-index: 100; pointer-events: none; }
-        .glass { background: rgba(0,0,0,0.85); border: 2px solid #00ffcc; padding: 10px 25px; border-radius: 20px; color: #fff; margin: 0 15px; pointer-events: auto; box-shadow: 0 0 25px rgba(0,255,204,0.4); font-weight: bold; }
-        #error-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; color: #ff0066; display: flex; align-items: center; justify-content: center; z-index: 1000; display: none; }
+        .glass { background: rgba(0,0,0,0.8); border: 2px solid #00ffcc; padding: 10px 25px; border-radius: 20px; color: #fff; margin: 0 15px; pointer-events: auto; box-shadow: 0 0 20px #00ffcc55; font-weight: bold; }
+        #loader { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #00ffcc; z-index: 1000; }
     </style>
 </head>
 <body>
-    <div id="error-overlay">ОШИБКА ЗАГРУЗКИ ДВИЖКА. ОБНОВИ СТРАНИЦУ.</div>
+    <div id="loader">ПОДКЛЮЧЕНИЕ RTX ENGINE...</div>
     <div id="ui">
         <div class="glass">💰 <span id="bal">0</span> $MEOW</div>
         <div class="glass" style="border-color:#ff0066">⚡ <span id="nrg">100</span>%</div>
     </div>
 
     <script>
-        // --- ПРОВЕРКА ЗАГРУЗКИ (BOOTLOADER) ---
-        function startEngine() {
+        const db = JSON.parse(localStorage.getItem('cc_v55')) || { bal: 0, nrg: 100 };
+
+        function init() {
             if (typeof THREE === 'undefined') {
-                document.getElementById('error-overlay').style.display = 'flex';
+                document.getElementById('loader').innerText = "ОШИБКА: CDN НЕ ОТВЕТИЛ. ПЕРЕЗАГРУЗИ СТРАНИЦУ (CTRL+F5)";
                 return;
             }
+            document.getElementById('loader').style.display = 'none';
 
-            const tg = window.Telegram?.WebApp;
-            let db = JSON.parse(localStorage.getItem('cc_v54')) || { bal: 0, nrg: 100 };
-
-            // --- SCENE SETUP ---
+            // --- 3D SCENE ---
             const scene = new THREE.Scene();
             scene.background = new THREE.Color(0x020502);
             
             const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
-            const renderer = new THREE.WebGLRenderer({ antialias: true });
+            const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
             renderer.setSize(window.innerWidth, window.innerHeight);
             renderer.setPixelRatio(window.devicePixelRatio);
             document.body.appendChild(renderer.domElement);
 
-            // --- LIGHTING ---
-            const ambient = new THREE.AmbientLight(0xffffff, 1.2);
-            scene.add(ambient);
-            const sun = new THREE.DirectionalLight(0xffffff, 1);
-            sun.position.set(10, 20, 10);
-            scene.add(sun);
+            // --- LIGHT ---
+            const light = new THREE.AmbientLight(0xffffff, 1.5);
+            scene.add(light);
 
             // --- WORLD ---
-            const ground = new THREE.Mesh(new THREE.PlaneGeometry(1000, 1000), new THREE.MeshStandardMaterial({color: 0x1a2e1a}));
+            const ground = new THREE.Mesh(new THREE.PlaneGeometry(100, 100), new THREE.MeshStandardMaterial({color: 0x1a2e1a}));
             ground.rotation.x = -Math.PI/2;
             scene.add(ground);
 
@@ -59,52 +55,52 @@ html
             cat.position.y = 1;
             scene.add(cat);
 
-            // --- AI ANIMALS ---
-            const fauna = [];
-            for(let i=0; i<6; i++) {
-                const animal = new THREE.Mesh(new THREE.BoxGeometry(1.2, 1, 1.5), new THREE.MeshStandardMaterial({color: i%2===0?0xffff00:0xffffff}));
-                animal.position.set(Math.random()*40-20, 0.5, Math.random()*40-20);
-                scene.add(animal);
-                fauna.push({mesh: animal, target: animal.position.clone()});
+            // --- FAUNA (ANIMALS) ---
+            const animals = [];
+            for(let i=0; i<5; i++) {
+                const a = new THREE.Mesh(new THREE.BoxGeometry(1, 0.8, 1.2), new THREE.MeshStandardMaterial({color: 0xffffff}));
+                a.position.set(Math.random()*40-20, 0.4, Math.random()*40-20);
+                scene.add(a);
+                animals.push({mesh: a, target: a.position.clone()});
             }
 
-            camera.position.set(0, 20, 25);
+            camera.position.set(0, 15, 20);
             camera.lookAt(0, 0, 0);
 
-            let target = new THREE.Vector3(0, 1, 0);
+            let targetPos = new THREE.Vector3(0, 1, 0);
 
             window.addEventListener('mousedown', (e) => {
                 const mouse = new THREE.Vector2((e.clientX/window.innerWidth)*2-1, -(e.clientY/window.innerHeight)*2+1);
                 const ray = new THREE.Raycaster();
                 ray.setFromCamera(mouse, camera);
                 const hit = ray.intersectObject(ground);
-                if(hit.length > 0) target.copy(hit.point).y = 1;
+                if(hit.length > 0) targetPos.copy(hit.point).y = 1;
             });
 
-            function save() {
-                localStorage.setItem('cc_v54', JSON.stringify(db));
+            function updateUI() {
                 document.getElementById('bal').innerText = Math.floor(db.bal);
                 document.getElementById('nrg').innerText = Math.floor(db.nrg);
+                localStorage.setItem('cc_v55', JSON.stringify(db));
             }
 
             function animate() {
                 requestAnimationFrame(animate);
-                cat.position.lerp(target, 0.1);
-                fauna.forEach(a => {
-                    if(Math.random() > 0.99) a.target.set(Math.random()*60-30, 0.5, Math.random()*60-30);
+                cat.position.lerp(targetPos, 0.1);
+                animals.forEach(a => {
+                    if(Math.random() > 0.99) a.target.set(Math.random()*40-20, 0.4, Math.random()*40-20);
                     a.mesh.position.lerp(a.target, 0.01);
                     a.mesh.lookAt(a.target);
                 });
-                camera.position.lerp(new THREE.Vector3(cat.position.x, 20, cat.position.z + 25), 0.05);
+                camera.position.lerp(new THREE.Vector3(cat.position.x, 15, cat.position.z + 20), 0.05);
                 camera.lookAt(cat.position);
                 renderer.render(scene, camera);
             }
-
-            save(); animate(); tg?.ready();
+            updateUI();
+            animate();
         }
 
-        // Запуск только после полной загрузки страницы
-        window.onload = startEngine;
+        // Принудительный запуск
+        window.onload = init;
     </script>
 </body>
 </html>
