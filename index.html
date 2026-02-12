@@ -4,108 +4,147 @@ html
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>CyberCat: HD Reality</title>
+    <title>CyberCat: Ultra 3D</title>
+    <script src="https://cdnjs.cloudflare.com"></script>
     <script src="https://telegram.org"></script>
     <style>
-        :root { --neon: #00ffcc; --gold: #ffcc00; --pink: #ff0066; --grass: #1a4d2e; }
-        body { background: #000; color: #fff; font-family: 'Inter', sans-serif; margin: 0; overflow: hidden; touch-action: none; }
-        
-        #viewport { width: 100vw; height: 100vh; position: relative; overflow: hidden; }
-        
-        /* Автономная HD-трава (генерируется кодом) */
-        #world { 
-            position: absolute; width: 5000px; height: 5000px; z-index: 10;
-            background-color: var(--grass);
-            background-image: 
-                radial-gradient(circle at 2px 2px, rgba(255,255,255,0.05) 1px, transparent 0),
-                repeating-linear-gradient(45deg, rgba(0,0,0,0.1) 0, rgba(0,0,0,0.1) 2px, transparent 0, transparent 50px);
-            background-size: 40px 40px, 100px 100px;
-            box-shadow: inset 0 0 500px rgba(0,0,0,0.8);
-            transition: 0.1s linear;
-        }
-
-        /* HD Кот (Встроенный анимированный эффект) */
-        #cat { 
-            position: absolute; width: 90px; height: 90px; z-index: 1000; 
-            transform: translate(-50%, -50%); pointer-events: none;
-            background: radial-gradient(circle, var(--neon) 10%, transparent 70%);
-            border: 3px solid var(--neon); border-radius: 50%;
-            box-shadow: 0 0 30px var(--neon);
-            display: flex; align-items: center; justify-content: center; font-size: 50px;
-        }
-
-        /* HD Деревья (Встроенная графика) */
-        .tree { 
-            position: absolute; width: 140px; height: 200px; 
-            transform: translate(-50%, -90%); z-index: 800; 
-            display: flex; flex-direction: column; align-items: center;
-        }
-        .tree-top { 
-            width: 120px; height: 120px; border-radius: 50%;
-            background: radial-gradient(circle at 30% 30%, #2ecc71, #1a4d2e);
-            box-shadow: 20px 40px 15px rgba(0,0,0,0.4);
-        }
-        .tree-trunk { width: 20px; height: 60px; background: #3e2723; border-radius: 4px; }
-
-        /* UI */
-        .ui { position: fixed; background: rgba(0,0,0,0.85); backdrop-filter: blur(10px); border: 1px solid var(--neon); padding: 12px 20px; border-radius: 20px; z-index: 5000; }
-        .btn { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: #000; border: 2px solid var(--neon); color: #fff; padding: 16px 35px; border-radius: 20px; font-weight: 900; z-index: 5000; cursor: pointer; box-shadow: 0 0 20px var(--neon); }
+        body { margin: 0; background: #000; overflow: hidden; font-family: 'Inter', sans-serif; }
+        #ui { position: fixed; top: 15px; width: 100%; display: flex; justify-content: space-between; z-index: 100; pointer-events: none; }
+        .glass { background: rgba(0,0,0,0.8); border: 2px solid #00ffcc; padding: 10px 25px; border-radius: 20px; color: #fff; margin: 0 15px; pointer-events: auto; box-shadow: 0 0 20px rgba(0,255,204,0.3); }
+        canvas { display: block; }
     </style>
 </head>
 <body>
-    <div id="viewport">
-        <div id="world">
-            <div id="cat">🐈‍⬛</div>
-        </div>
+    <div id="ui">
+        <div class="glass">💰 <b id="bal">0</b></div>
+        <div class="glass" style="border-color:#ff0066">👾 BOSS HP: <b id="hp">1M</b></div>
     </div>
-    
-    <div class="ui" style="top:15px; left:15px;">💰 <b id="bal">0</b></div>
-    <div class="ui" style="top:15px; right:15px; border-color:var(--pink)">👾 BOSS: <b id="hp">1.0M</b></div>
-    
-    <button class="btn" onclick="reset()">🏠 В ЦЕНТР МИРА</button>
 
     <script>
         const tg = window.Telegram?.WebApp || { ready:()=>{}, expand:()=>{} };
-        let st = { x: 2500, y: 2500, score: 0, hp: 1000000 };
+        let score = 0, bossHp = 1000000;
 
-        const world = document.getElementById('world');
-        const cat = document.getElementById('cat');
+        // --- 3D ENGINE INITIALIZATION ---
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x0a1a0a);
+        scene.fog = new THREE.FogExp2(0x0a1a0a, 0.002);
 
-        function init() {
-            // Мгновенная отрисовка леса без ожидания загрузки
-            for(let i=0; i<45; i++) {
-                const t = document.createElement('div'); t.className = 'tree';
-                t.innerHTML = '<div class="tree-top"></div><div class="tree-trunk"></div>';
-                t.style.left = (Math.random()*4600+200)+'px'; t.style.top = (Math.random()*4600+200)+'px';
-                world.appendChild(t);
-            }
-            // Спавн босса
-            const b = document.createElement('div'); b.id = 'boss'; b.style.cssText = 'position:absolute; width:200px; height:200px; left:2500px; top:2500px; transform:translate(-50%,-50%); font-size:100px; text-align:center; cursor:pointer; z-index:500; filter:drop-shadow(0 0 30px var(--pink))';
-            b.innerText = '👾'; b.onclick = (e) => {
-                e.stopPropagation(); st.hp -= 10000; st.score += 1000;
-                tg.HapticFeedback?.impactOccurred('heavy'); update();
-            };
-            world.appendChild(b);
-            update(); tg.ready(); tg.expand();
-        }
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(window.devicePixelRatio);
+        document.body.appendChild(renderer.domElement);
 
-        function update() {
-            cat.style.left = st.x + 'px';
-            cat.style.top = st.y + 'px';
-            world.style.transform = `translate(${-st.x + window.innerWidth/2}px, ${-st.y + window.innerHeight/2}px)`;
-            document.getElementById('bal').innerText = st.score.toLocaleString();
-            document.getElementById('hp').innerText = (st.hp/1000000).toFixed(1) + 'M';
-        }
+        // --- LIGHTING (Реалистичный свет) ---
+        const ambientLight = new THREE.AmbientLight(0x404040, 2); // Мягкий общий свет
+        scene.add(ambientLight);
 
-        window.addEventListener('pointerdown', (e) => {
-            if(e.target.closest('.ui') || e.target.closest('.btn')) return;
-            const r = world.getBoundingClientRect();
-            st.x = e.clientX - r.left; st.y = e.clientY - r.top;
-            update();
+        const sunLight = new THREE.DirectionalLight(0xffffff, 1);
+        sunLight.position.set(50, 100, 50);
+        scene.add(sunLight);
+
+        // --- WORLD (HD Трава) ---
+        const loader = new THREE.TextureLoader();
+        const grassTex = loader.load('https://www.transparenttextures.com');
+        grassTex.wrapS = grassTex.wrapT = THREE.RepeatWrapping;
+        grassTex.repeat.set(100, 100);
+
+        const planeGeo = new THREE.PlaneGeometry(1000, 1000);
+        const planeMat = new THREE.MeshPhongMaterial({ color: 0x1a4d2e, map: grassTex });
+        const ground = new THREE.Mesh(planeGeo, planeMat);
+        ground.rotation.x = -Math.PI / 2;
+        scene.add(ground);
+
+        // --- PLAYER (CyberCat) ---
+        const catGeo = new THREE.SphereGeometry(1, 32, 32);
+        const catMat = new THREE.MeshStandardMaterial({ color: 0x00ffcc, emissive: 0x00ffcc, emissiveIntensity: 2 });
+        const cat = new THREE.Mesh(catGeo, catMat);
+        cat.position.y = 1;
+        scene.add(cat);
+
+        // Добавляем текст 🐈‍⬛ над сферой
+        const catSprite = createTextSprite('🐈‍⬛', 120);
+        catSprite.position.y = 2;
+        cat.add(catSprite);
+
+        // --- BOSS (3D Entity) ---
+        const bossGeo = new THREE.BoxGeometry(4, 4, 4);
+        const bossMat = new THREE.MeshStandardMaterial({ color: 0xff0066, emissive: 0xff0066, emissiveIntensity: 1 });
+        const boss = new THREE.Mesh(bossGeo, bossMat);
+        boss.position.set(10, 2, -10);
+        scene.add(boss);
+
+        const bossSprite = createTextSprite('👾', 150);
+        bossSprite.position.y = 4;
+        boss.add(bossSprite);
+
+        // --- CONTROLS & ANIMATION ---
+        camera.position.set(0, 15, 15);
+        camera.lookAt(cat.position);
+
+        const mouse = new THREE.Vector2();
+        const raycaster = new THREE.Raycaster();
+
+        window.addEventListener('click', (event) => {
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObjects([ground, boss]);
+
+            intersects.forEach(intersect => {
+                if (intersect.object === boss) {
+                    score += 1000; bossHp -= 5000;
+                    document.getElementById('bal').innerText = score.toLocaleString();
+                    document.getElementById('hp').innerText = (bossHp/1000) + 'K';
+                    tg.HapticFeedback?.impactOccurred('heavy');
+                } else {
+                    // Плавное движение кота в 3D
+                    new Tween(cat.position, intersect.point, 500);
+                }
+            });
         });
 
-        function reset() { st.x = 2500; st.y = 2500; update(); }
-        init();
+        function createTextSprite(text, size) {
+            const canvas = document.createElement('canvas');
+            const context = canvas.getContext('2d');
+            canvas.width = 256; canvas.height = 256;
+            context.font = `${size}px Arial`;
+            context.textAlign = 'center';
+            context.fillStyle = 'white';
+            context.fillText(text, 128, 160);
+            const texture = new THREE.CanvasTexture(canvas);
+            const spriteMaterial = new THREE.SpriteMaterial({ map: texture });
+            return new THREE.Sprite(spriteMaterial);
+        }
+
+        // Простая функция анимации (вместо Tween-библиотеки)
+        function Tween(obj, target, duration) {
+            const start = { x: obj.x, z: obj.z };
+            const startTime = Date.now();
+            function animate() {
+                const elapsed = Date.now() - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+                obj.x = start.x + (target.x - start.x) * progress;
+                obj.z = start.z + (target.z - start.z) * progress;
+                if (progress < 1) requestAnimationFrame(animate);
+            }
+            animate();
+        }
+
+        function animateWorld() {
+            requestAnimationFrame(animateWorld);
+            
+            // Камера следит за игроком в 3D
+            camera.position.x = cat.position.x;
+            camera.position.z = cat.position.z + 20;
+            camera.lookAt(cat.position);
+
+            renderer.render(scene, camera);
+        }
+
+        animateWorld();
+        tg.ready(); tg.expand();
     </script>
 </body>
 </html>
