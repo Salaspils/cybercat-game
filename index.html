@@ -4,148 +4,122 @@ html
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>CyberCat: Ultra 3D</title>
+    <title>CyberCat: PC & Mobile Edition</title>
     <script src="https://cdnjs.cloudflare.com"></script>
     <script src="https://telegram.org"></script>
     <style>
-        body { margin: 0; background: #000; overflow: hidden; font-family: 'Inter', sans-serif; }
-        #ui { position: fixed; top: 15px; width: 100%; display: flex; justify-content: space-between; z-index: 100; pointer-events: none; }
-        .glass { background: rgba(0,0,0,0.8); border: 2px solid #00ffcc; padding: 10px 25px; border-radius: 20px; color: #fff; margin: 0 15px; pointer-events: auto; box-shadow: 0 0 20px rgba(0,255,204,0.3); }
-        canvas { display: block; }
+        body { margin: 0; background: #020502; overflow: hidden; font-family: 'Segoe UI', sans-serif; }
+        #ui { position: fixed; top: 15px; width: 100%; display: flex; justify-content: space-around; z-index: 100; pointer-events: none; }
+        .glass { background: rgba(0,0,0,0.85); border: 1px solid #4CAF50; padding: 12px 25px; border-radius: 15px; color: #fff; pointer-events: auto; box-shadow: 0 0 20px rgba(76,175,80,0.3); }
+        #hint { position: fixed; bottom: 20px; width: 100%; text-align: center; color: #4CAF50; font-size: 12px; pointer-events: none; opacity: 0.7; }
     </style>
 </head>
 <body>
     <div id="ui">
-        <div class="glass">💰 <b id="bal">0</b></div>
-        <div class="glass" style="border-color:#ff0066">👾 BOSS HP: <b id="hp">1M</b></div>
+        <div class="glass">💰 <b id="bal">0</b> $MEOW</div>
+        <div class="glass">⚡ <b id="nrg">100</b>%</div>
     </div>
+    <div id="hint">УПРАВЛЕНИЕ: КЛИК МЫШКИ ИЛИ WASD / СТРЕЛКИ</div>
 
     <script>
-        const tg = window.Telegram?.WebApp || { ready:()=>{}, expand:()=>{} };
-        let score = 0, bossHp = 1000000;
+        const tg = window.Telegram?.WebApp;
+        let db = JSON.parse(localStorage.getItem('cc_v48')) || { bal: 0, nrg: 100 };
 
-        // --- 3D ENGINE INITIALIZATION ---
+        // --- 3D CORE ---
         const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x0a1a0a);
-        scene.fog = new THREE.FogExp2(0x0a1a0a, 0.002);
+        scene.background = new THREE.Color(0x020502);
+        scene.fog = new THREE.FogExp2(0x020502, 0.012);
 
-        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 0.1, 1000);
         const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.setPixelRatio(window.devicePixelRatio);
+        renderer.shadowMap.enabled = true; // Тени для ПК
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
         document.body.appendChild(renderer.domElement);
 
-        // --- LIGHTING (Реалистичный свет) ---
-        const ambientLight = new THREE.AmbientLight(0x404040, 2); // Мягкий общий свет
-        scene.add(ambientLight);
+        const sun = new THREE.DirectionalLight(0xffffff, 1.2);
+        sun.position.set(30, 50, 30);
+        sun.castShadow = true;
+        sun.shadow.mapSize.width = 2048; // Качество теней для ПК
+        sun.shadow.mapSize.height = 2048;
+        scene.add(sun, new THREE.AmbientLight(0x404040, 1.5));
 
-        const sunLight = new THREE.DirectionalLight(0xffffff, 1);
-        sunLight.position.set(50, 100, 50);
-        scene.add(sunLight);
+        // --- WORLD ---
+        const ground = new THREE.Mesh(new THREE.PlaneGeometry(1000, 1000), new THREE.MeshStandardMaterial({color: 0x1a2e1a}));
+        ground.rotation.x = -Math.PI/2; ground.receiveShadow = true; scene.add(ground);
+        
+        const pond = new THREE.Mesh(new THREE.CircleGeometry(15, 32), new THREE.MeshStandardMaterial({color: 0x0077ff, transparent: true, opacity: 0.6, metalness: 0.8}));
+        pond.rotation.x = -Math.PI/2; pond.position.set(-20, 0.1, -20); scene.add(pond);
 
-        // --- WORLD (HD Трава) ---
-        const loader = new THREE.TextureLoader();
-        const grassTex = loader.load('https://www.transparenttextures.com');
-        grassTex.wrapS = grassTex.wrapT = THREE.RepeatWrapping;
-        grassTex.repeat.set(100, 100);
+        // --- FAUNA ---
+        const fauna = [];
+        const spawn = (type, x, z) => {
+            const group = new THREE.Group();
+            const color = type === 'duck' ? 0xffff00 : 0xffffff;
+            const body = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.6, 1.2), new THREE.MeshStandardMaterial({color}));
+            body.castShadow = true; group.add(body);
+            group.position.set(x, 0.3, z); scene.add(group);
+            fauna.push({ mesh: group, target: new THREE.Vector3(x, 0.3, z), type });
+        };
+        for(let i=0; i<10; i++) spawn(i%2===0?'duck':'goose', Math.random()*50-25, Math.random()*50-25);
 
-        const planeGeo = new THREE.PlaneGeometry(1000, 1000);
-        const planeMat = new THREE.MeshPhongMaterial({ color: 0x1a4d2e, map: grassTex });
-        const ground = new THREE.Mesh(planeGeo, planeMat);
-        ground.rotation.x = -Math.PI / 2;
-        scene.add(ground);
+        // --- PLAYER ---
+        const cat = new THREE.Mesh(new THREE.SphereGeometry(0.8, 32, 32), new THREE.MeshStandardMaterial({color: 0x111, emissive: 0x00ffcc, emissiveIntensity: 0.5}));
+        cat.castShadow = true; cat.position.y = 0.8; scene.add(cat);
+        let target = new THREE.Vector3(0, 0.8, 0);
 
-        // --- PLAYER (CyberCat) ---
-        const catGeo = new THREE.SphereGeometry(1, 32, 32);
-        const catMat = new THREE.MeshStandardMaterial({ color: 0x00ffcc, emissive: 0x00ffcc, emissiveIntensity: 2 });
-        const cat = new THREE.Mesh(catGeo, catMat);
-        cat.position.y = 1;
-        scene.add(cat);
-
-        // Добавляем текст 🐈‍⬛ над сферой
-        const catSprite = createTextSprite('🐈‍⬛', 120);
-        catSprite.position.y = 2;
-        cat.add(catSprite);
-
-        // --- BOSS (3D Entity) ---
-        const bossGeo = new THREE.BoxGeometry(4, 4, 4);
-        const bossMat = new THREE.MeshStandardMaterial({ color: 0xff0066, emissive: 0xff0066, emissiveIntensity: 1 });
-        const boss = new THREE.Mesh(bossGeo, bossMat);
-        boss.position.set(10, 2, -10);
-        scene.add(boss);
-
-        const bossSprite = createTextSprite('👾', 150);
-        bossSprite.position.y = 4;
-        boss.add(bossSprite);
-
-        // --- CONTROLS & ANIMATION ---
-        camera.position.set(0, 15, 15);
-        camera.lookAt(cat.position);
-
-        const mouse = new THREE.Vector2();
-        const raycaster = new THREE.Raycaster();
-
-        window.addEventListener('click', (event) => {
-            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
-
-            raycaster.setFromCamera(mouse, camera);
-            const intersects = raycaster.intersectObjects([ground, boss]);
-
-            intersects.forEach(intersect => {
-                if (intersect.object === boss) {
-                    score += 1000; bossHp -= 5000;
-                    document.getElementById('bal').innerText = score.toLocaleString();
-                    document.getElementById('hp').innerText = (bossHp/1000) + 'K';
-                    tg.HapticFeedback?.impactOccurred('heavy');
-                } else {
-                    // Плавное движение кота в 3D
-                    new Tween(cat.position, intersect.point, 500);
-                }
-            });
+        // --- CONTROLS (MOUSE + WASD) ---
+        window.addEventListener('mousedown', (e) => {
+            const mouse = new THREE.Vector2((e.clientX/window.innerWidth)*2-1, -(e.clientY/window.innerHeight)*2+1);
+            const ray = new THREE.Raycaster();
+            ray.setFromCamera(mouse, camera);
+            const hit = ray.intersectObject(ground);
+            if(hit.length > 0) target.copy(hit.point).y = 0.8;
         });
 
-        function createTextSprite(text, size) {
-            const canvas = document.createElement('canvas');
-            const context = canvas.getContext('2d');
-            canvas.width = 256; canvas.height = 256;
-            context.font = `${size}px Arial`;
-            context.textAlign = 'center';
-            context.fillStyle = 'white';
-            context.fillText(text, 128, 160);
-            const texture = new THREE.CanvasTexture(canvas);
-            const spriteMaterial = new THREE.SpriteMaterial({ map: texture });
-            return new THREE.Sprite(spriteMaterial);
-        }
+        const keys = {};
+        window.addEventListener('keydown', (e) => keys[e.code] = true);
+        window.addEventListener('keyup', (e) => keys[e.code] = false);
 
-        // Простая функция анимации (вместо Tween-библиотеки)
-        function Tween(obj, target, duration) {
-            const start = { x: obj.x, z: obj.z };
-            const startTime = Date.now();
-            function animate() {
-                const elapsed = Date.now() - startTime;
-                const progress = Math.min(elapsed / duration, 1);
-                obj.x = start.x + (target.x - start.x) * progress;
-                obj.z = start.z + (target.z - start.z) * progress;
-                if (progress < 1) requestAnimationFrame(animate);
-            }
-            animate();
-        }
+        function updateLogic() {
+            const speed = 0.4;
+            if(keys['KeyW'] || keys['ArrowUp']) target.z -= speed;
+            if(keys['KeyS'] || keys['ArrowDown']) target.z += speed;
+            if(keys['KeyA'] || keys['ArrowLeft']) target.x -= speed;
+            if(keys['KeyD'] || keys['ArrowRight']) target.x += speed;
 
-        function animateWorld() {
-            requestAnimationFrame(animateWorld);
+            cat.position.lerp(target, 0.1);
             
-            // Камера следит за игроком в 3D
-            camera.position.x = cat.position.x;
-            camera.position.z = cat.position.z + 20;
-            camera.lookAt(cat.position);
+            fauna.forEach(a => {
+                if(Math.random() > 0.99) a.target.set(Math.random()*80-40, 0.3, Math.random()*80-40);
+                const inWater = a.mesh.position.distanceTo(pond.position) < 15;
+                a.mesh.position.lerp(a.target, 0.02);
+                a.mesh.position.y = inWater ? 0.05 + Math.sin(Date.now()*0.002)*0.1 : 0.4;
+                a.mesh.lookAt(a.target);
+            });
 
+            if(db.nrg < 100) db.nrg += 0.01;
+            document.getElementById('bal').innerText = Math.floor(db.bal);
+            document.getElementById('nrg').innerText = Math.floor(db.nrg);
+        }
+
+        // --- LOOP ---
+        function animate() {
+            requestAnimationFrame(animate);
+            updateLogic();
+            camera.position.lerp(new THREE.Vector3(cat.position.x, 25, cat.position.z + 30), 0.05);
+            camera.lookAt(cat.position);
             renderer.render(scene, camera);
         }
 
-        animateWorld();
-        tg.ready(); tg.expand();
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        animate();
+        tg?.ready();
     </script>
 </body>
 </html>
-
