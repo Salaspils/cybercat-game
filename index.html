@@ -4,47 +4,86 @@ html
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>CyberCat: Clean Build</title>
+    <title>CyberCat: Deep Reality</title>
     <script src="https://telegram.org"></script>
     <style>
         :root { --neon: #00ffcc; --gold: #ffcc00; --pink: #ff0066; }
-        body { background: #000; color: #fff; font-family: sans-serif; margin: 0; overflow: hidden; touch-action: none; }
-        #world { position: absolute; width: 5000px; height: 5000px; background: #1a4d2e; background-image: radial-gradient(rgba(255,255,255,0.05) 1px, transparent 1px); background-size: 60px 60px; }
+        body { background: #000; color: #fff; font-family: 'Inter', sans-serif; margin: 0; overflow: hidden; touch-action: none; }
         
-        #cat { position: absolute; width: 80px; height: 80px; z-index: 1000; transform: translate(-50%, -50%); pointer-events: none; filter: drop-shadow(0 0 15px var(--neon)); }
-        .boss { position: absolute; width: 200px; height: 200px; transform: translate(-50%, -50%); z-index: 500; filter: drop-shadow(0 0 30px var(--pink)); cursor: pointer; }
-        .tree { position: absolute; width: 100px; height: 140px; transform: translate(-50%, -90%); z-index: 800; }
+        #viewport { width: 100vw; height: 100vh; position: relative; overflow: hidden; }
+        
+        /* HD Ландшафт */
+        #world { 
+            position: absolute; width: 6000px; height: 6000px; z-index: 10;
+            background-color: #1a4d2e;
+            background-image: 
+                url('https://www.transparenttextures.com'), 
+                url('https://www.transparenttextures.com');
+            background-blend-mode: soft-light;
+            box-shadow: inset 0 0 500px rgba(0,0,0,0.8);
+            transition: 0.1s linear;
+        }
 
-        .ui { position: fixed; background: rgba(0,0,0,0.85); border: 1px solid var(--neon); padding: 12px; border-radius: 20px; z-index: 5000; }
-        .btn { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #000; border: 2px solid var(--neon); color: #fff; padding: 15px 30px; border-radius: 20px; font-weight: bold; z-index: 5000; cursor: pointer; }
-        .dmg { position: absolute; color: var(--gold); font-weight: bold; animation: fUp 1s forwards; pointer-events: none; z-index: 2000; }
-        @keyframes fUp { to { transform: translateY(-100px); opacity: 0; } }
+        /* HD Кот */
+        #cat { 
+            position: absolute; width: 110px; height: 110px; z-index: 1000; 
+            transform: translate(-50%, -50%); pointer-events: none;
+            background: url('https://media.giphy.com') no-repeat center;
+            background-size: contain; filter: drop-shadow(0 0 20px var(--neon));
+        }
+
+        /* HD Босс */
+        .boss { 
+            position: absolute; width: 220px; height: 220px; transform: translate(-50%, -50%); z-index: 500;
+            background: url('https://media.giphy.com') no-repeat center;
+            background-size: contain; filter: hue-rotate(280deg) brightness(1.2) drop-shadow(0 0 30px var(--pink));
+            cursor: pointer; transition: transform 0.1s;
+        }
+        .boss:active { transform: translate(-50%, -50%) scale(0.9); }
+
+        /* HD Растительность */
+        .tree { 
+            position: absolute; width: 180px; height: 240px; 
+            background: url('https://pngimg.com') no-repeat center; 
+            background-size: contain; transform: translate(-50%, -90%); z-index: 800;
+            filter: drop-shadow(25px 45px 15px rgba(0,0,0,0.4));
+        }
+
+        /* UI */
+        .ui { position: fixed; background: rgba(0,0,0,0.85); backdrop-filter: blur(10px); border: 1px solid var(--neon); padding: 12px; border-radius: 20px; z-index: 5000; }
+        .btn { position: fixed; bottom: 25px; left: 50%; transform: translateX(-50%); background: #000; border: 2px solid var(--neon); color: #fff; padding: 15px 30px; border-radius: 20px; font-weight: bold; z-index: 5000; box-shadow: 0 10px 20px rgba(0,0,0,0.5); }
+        
+        .dmg-popup { position: absolute; color: var(--gold); font-weight: bold; animation: fUp 1s forwards; pointer-events: none; z-index: 2000; font-size: 24px; }
+        @keyframes fUp { to { transform: translateY(-100px) scale(1.5); opacity: 0; } }
     </style>
 </head>
 <body>
-    <div id="world">
-        <div id="cat">🐈‍⬛</div>
-        <div id="boss-ent" class="boss" style="left:2500px; top:2500px;">👾</div>
+    <div id="viewport">
+        <div id="world">
+            <div id="cat"></div>
+            <div id="boss-ent" class="boss" style="left:3000px; top:3000px;"></div>
+        </div>
     </div>
     
-    <div class="ui" style="top:15px; left:15px;">💰 <b id="bal">5000</b></div>
-    <div class="ui" style="top:15px; right:15px; border-color:var(--pink)">👾 BOSS HP: <b id="hp">1M</b></div>
+    <div class="ui" style="top:15px; left:15px;">💰 <b id="bal">0</b></div>
+    <div class="ui" style="top:15px; right:15px; border-color:var(--pink)">👾 BOSS: <b id="hp">1.0M</b></div>
     <button class="btn" onclick="reset()">🏠 В ЦЕНТР</button>
 
     <script>
-        const tg = window.Telegram?.WebApp || { ready:()=>{}, expand:()=>{} };
-        let state = { x: 2500, y: 2500, score: 5000, hp: 1000000 };
+        const tg = window.Telegram?.WebApp || { ready:()=>{}, expand:()=>{}, HapticFeedback:{impactOccurred:()=>{}} };
+        let state = JSON.parse(localStorage.getItem('cybercat_v29')) || { x: 3000, y: 3000, score: 208000, hp: 1000000 };
         
         const world = document.getElementById('world');
         const cat = document.getElementById('cat');
 
         function init() {
-            for(let i=0; i<30; i++) {
-                const t = document.createElement('div'); t.className = 'tree'; t.innerText = '🌳';
-                t.style.left = (Math.random()*4000+500)+'px'; t.style.top = (Math.random()*4000+500)+'px';
+            // Генерация леса
+            for(let i=0; i<40; i++) {
+                const t = document.createElement('div'); t.className = 'tree';
+                t.style.left = (Math.random()*5600+200)+'px'; t.style.top = (Math.random()*5600+200)+'px';
                 world.appendChild(t);
             }
-            update(); tg.ready();
+            update(); tg.ready(); tg.expand();
         }
 
         function update() {
@@ -52,7 +91,8 @@ html
             cat.style.top = state.y + 'px';
             world.style.transform = `translate(${-state.x + window.innerWidth/2}px, ${-state.y + window.innerHeight/2}px)`;
             document.getElementById('bal').innerText = Math.floor(state.score).toLocaleString();
-            document.getElementById('hp').innerText = (state.hp/1000).toFixed(0) + 'K';
+            document.getElementById('hp').innerText = state.hp > 0 ? (state.hp/1000000).toFixed(1) + 'M' : "RIP";
+            localStorage.setItem('cybercat_v29', JSON.stringify(state));
         }
 
         window.addEventListener('pointerdown', (e) => {
@@ -63,14 +103,27 @@ html
         });
 
         document.getElementById('boss-ent').onclick = (e) => {
-            e.stopPropagation(); state.hp -= 5000; state.score += 1000;
-            const d = document.createElement('div'); d.className = 'dmg'; d.innerText = "+1000";
-            d.style.left = e.clientX + 'px'; d.style.top = e.clientY + 'px';
-            document.body.appendChild(d); setTimeout(()=>d.remove(), 1000);
+            e.stopPropagation();
+            if(state.hp <= 0) return;
+
+            state.hp -= 10000; state.score += 1000;
+            showDmg(e.clientX, e.clientY, "+1,000");
+            tg.HapticFeedback.impactOccurred('heavy');
+            
+            if(state.hp <= 0) {
+                tg.showAlert("БОСС ПОВЕРЖЕН! Он возродится через 5 секунд...");
+                setTimeout(() => { state.hp = 2000000; update(); }, 5000);
+            }
             update();
         };
 
-        function reset() { state.x = 2500; state.y = 2500; update(); }
+        function showDmg(x, y, txt) {
+            const d = document.createElement('div'); d.className = 'dmg-popup'; d.innerText = txt;
+            d.style.left = x + 'px'; d.style.top = y + 'px';
+            document.body.appendChild(d); setTimeout(()=>d.remove(), 1000);
+        }
+
+        function reset() { state.x = 3000; state.y = 3000; update(); }
         init();
     </script>
 </body>
