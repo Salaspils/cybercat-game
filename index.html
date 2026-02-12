@@ -4,87 +4,95 @@ html
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>CyberCat: Universe</title>
+    <title>CyberCat: HD Reality</title>
     <script src="https://telegram.org"></script>
     <style>
         :root { --neon: #00ffcc; --gold: #ffcc00; }
-        body { background: #000; color: #fff; font-family: 'Inter', sans-serif; margin: 0; overflow: hidden; touch-action: none; }
+        body { background: #010502; color: #fff; font-family: 'Inter', sans-serif; margin: 0; overflow: hidden; touch-action: none; }
         
         #viewport { width: 100vw; height: 100vh; position: relative; overflow: hidden; }
         
-        #sky-layer { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; transition: 5s; }
-        .celestial { position: absolute; font-size: 60px; z-index: 2; transition: 5s linear; }
-        #stars-canvas { position: absolute; width: 100%; height: 100%; z-index: 1; opacity: 0; transition: 5s; }
-
+        /* HD Земля с глубокой текстурой */
         #world { 
-            position: absolute; width: 5000px; height: 5000px; z-index: 10;
-            background-color: #1a4d2e; background-image: url('https://www.transparenttextures.com');
+            position: absolute; width: 6000px; height: 6000px; z-index: 10;
+            background-color: #1a4d2e;
+            background-image: 
+                url('https://www.transparenttextures.com'), 
+                url('https://www.transparenttextures.com');
+            background-blend-mode: soft-light;
+            box-shadow: inset 0 0 500px rgba(0,0,0,0.8);
         }
 
+        /* HD Кот с динамической тенью */
         #cat { 
-            position: absolute; width: 80px; height: 80px; z-index: 1000; 
+            position: absolute; width: 110px; height: 110px; z-index: 1000; 
             transform: translate(-50%, -50%); pointer-events: none;
             background: url('https://media.giphy.com') no-repeat center;
             background-size: contain;
         }
+        #cat::after { /* Тень кота */
+            content: ''; position: absolute; bottom: 0; left: 50%; width: 60px; height: 20px;
+            background: rgba(0,0,0,0.4); border-radius: 50%; transform: translateX(-50%); z-index: -1;
+            filter: blur(5px);
+        }
 
-        .tree { position: absolute; width: 120px; height: 160px; background: url('https://pngimg.com') no-repeat center; background-size: contain; transform: translate(-50%, -90%); z-index: 800; }
+        /* HD Растительность с тенями */
+        .tree { 
+            position: absolute; width: 220px; height: 300px; 
+            background: url('https://pngimg.com') no-repeat center; 
+            background-size: contain; transform: translate(-50%, -95%); z-index: 800;
+            animation: sway 6s ease-in-out infinite; transform-origin: bottom center;
+            filter: drop-shadow(25px 45px 15px rgba(0,0,0,0.4));
+        }
 
-        .glass { position: fixed; background: rgba(0,0,0,0.8); border: 1px solid var(--neon); padding: 12px; border-radius: 20px; z-index: 5000; top: 15px; left: 15px; }
+        .bush {
+            position: absolute; width: 90px; height: 70px;
+            background: url('https://pngimg.com') no-repeat center;
+            background-size: contain; transform: translate(-50%, -50%); z-index: 700;
+            filter: drop-shadow(10px 15px 5px rgba(0,0,0,0.3));
+        }
+
+        @keyframes sway {
+            0%, 100% { transform: translate(-50%, -95%) rotate(-1.5deg); }
+            50% { transform: translate(-50%, -95%) rotate(1.5deg); }
+        }
+
+        /* Эффект освещения и виньетка */
+        #fx-layer { position: fixed; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index: 5000; 
+            background: radial-gradient(circle, transparent 40%, rgba(0,0,0,0.4) 100%);
+        }
+
+        .ui-top { position: fixed; top: 20px; left: 20px; z-index: 6000; background: rgba(0,0,0,0.85); backdrop-filter: blur(15px); border: 1px solid var(--neon); padding: 15px; border-radius: 25px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
     </style>
 </head>
 <body>
-    <div id="sky-layer">
-        <canvas id="stars-canvas"></canvas>
-        <div id="sun" class="celestial">☀️</div>
-        <div id="moon" class="celestial" style="display:none">🌙</div>
-    </div>
-
     <div id="viewport">
         <div id="world"><div id="cat"></div></div>
     </div>
-    
-    <div class="glass">💰 <b id="bal">5000</b><br><small id="time-info">12:00 (День)</small></div>
+    <div id="fx-layer"></div>
+
+    <div class="ui-top">
+        <span style="font-size: 20px;">💰 <b id="bal">5,000</b></span><br>
+        <small style="color: #aaa;">Status: HD Cinematic Mode</small>
+    </div>
 
     <script>
         const tg = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp : { expand: () => {}, ready: () => {} };
-        
-        // Авто-центровка при старте
-        let state = { 
-            catPos: { x: 2500, y: 2500 }, 
-            score: 5000 
-        };
-        let gameHour = 12;
-
+        let state = { catPos: { x: 3000, y: 3000 }, score: 5000 };
         const world = document.getElementById('world');
         const cat = document.getElementById('cat');
 
         function init() {
-            // Очистка старой памяти координат
-            localStorage.removeItem('cybercat_save_pos'); 
-            
-            for(let i=0; i<30; i++) {
-                const t = document.createElement('div'); t.className = 'tree';
-                t.style.left = (Math.random()*4000+500)+'px'; 
-                t.style.top = (Math.random()*4000+500)+'px'; 
-                world.appendChild(t);
+            // Генерация HD леса
+            for(let i=0; i<65; i++) {
+                const type = Math.random() > 0.4 ? 'tree' : 'bush';
+                const el = document.createElement('div'); el.className = type;
+                el.style.left = (Math.random()*5600+200)+'px'; 
+                el.style.top = (Math.random()*5600+200)+'px'; 
+                world.appendChild(el);
             }
-            
             updateCamera();
-            setInterval(tick, 5000); // 1 час = 5 сек для теста (потом вернем 10 мин)
             tg.ready(); tg.expand();
-        }
-
-        function tick() {
-            gameHour = (gameHour + 1) % 24;
-            const isNight = gameHour >= 20 || gameHour <= 6;
-            document.getElementById('time-info').innerText = `${gameHour}:00 (${isNight ? 'Ночь' : 'День'})`;
-            
-            document.getElementById('sky-layer').style.background = isNight ? "#05051a" : "#4facfe";
-            world.style.backgroundColor = isNight ? "#0a1f0f" : "#1a4d2e";
-            document.getElementById('stars-canvas').style.opacity = isNight ? "1" : "0";
-            document.getElementById('sun').style.display = isNight ? 'none' : 'block';
-            document.getElementById('moon').style.display = isNight ? 'block' : 'none';
         }
 
         function updateCamera() {
@@ -93,9 +101,7 @@ html
             world.style.transform = `translate(${-state.catPos.x + window.innerWidth/2}px, ${-state.catPos.y + window.innerHeight/2}px)`;
         }
 
-        // Клик = мгновенный телепорт Кота (для теста)
         window.addEventListener('mousedown', (e) => {
-            // Рассчитываем координаты клика относительно мира
             const rect = world.getBoundingClientRect();
             state.catPos.x = e.clientX - rect.left;
             state.catPos.y = e.clientY - rect.top;
@@ -106,7 +112,3 @@ html
     </script>
 </body>
 </html>
-
-
-
-
