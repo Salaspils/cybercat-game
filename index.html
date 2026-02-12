@@ -4,42 +4,83 @@ html
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>CyberCat: Direct Render</title>
+    <title>CyberCat: Universe</title>
     <script src="https://telegram.org"></script>
     <style>
         :root { --neon: #00ffcc; --gold: #ffcc00; --pink: #ff0066; }
-        body { background: #000; color: #fff; font-family: sans-serif; margin: 0; overflow: hidden; touch-action: none; }
-        #world { position: absolute; width: 6000px; height: 6000px; background: #1a4d2e; background-image: radial-gradient(rgba(255,255,255,0.05) 1px, transparent 1px); background-size: 50px 50px; transition: 0.1s linear; }
+        body { background: #000; color: #fff; font-family: 'Inter', sans-serif; margin: 0; overflow: hidden; touch-action: none; }
         
-        /* Встроенный Кот (SVG) */
-        #cat { position: absolute; width: 80px; height: 80px; z-index: 1000; transform: translate(-50%, -50%); pointer-events: none; filter: drop-shadow(0 0 15px var(--neon)); }
+        #viewport { width: 100vw; height: 100vh; position: relative; overflow: hidden; }
         
-        /* Встроенный Босс (SVG) */
-        .boss { position: absolute; width: 200px; height: 200px; transform: translate(-50%, -50%); z-index: 500; filter: drop-shadow(0 0 30px var(--pink)); cursor: pointer; }
+        /* HD Ground */
+        #world { 
+            position: absolute; width: 6000px; height: 6000px; z-index: 10;
+            background-color: #1a4d2e;
+            background-image: url('https://www.transparenttextures.com');
+            box-shadow: inset 0 0 500px rgba(0,0,0,0.8);
+            transition: 0.1s linear;
+        }
+
+        /* HD Кот */
+        #cat { 
+            position: absolute; width: 100px; height: 100px; z-index: 1000; 
+            transform: translate(-50%, -50%); pointer-events: none;
+            background: url('https://media.giphy.com') no-repeat center;
+            background-size: contain; filter: drop-shadow(0 0 15px var(--neon));
+        }
+
+        /* HD Босс */
+        .boss { 
+            position: absolute; width: 220px; height: 220px; transform: translate(-50%, -50%); z-index: 500;
+            background: url('https://media.giphy.com') no-repeat center;
+            background-size: contain; filter: hue-rotate(280deg) brightness(1.2) drop-shadow(0 0 30px var(--pink));
+            cursor: pointer;
+        }
+
+        /* HD Деревья */
+        .tree { 
+            position: absolute; width: 150px; height: 200px; 
+            background: url('https://pngimg.com') no-repeat center; 
+            background-size: contain; transform: translate(-50%, -90%); z-index: 800;
+            filter: drop-shadow(20px 40px 10px rgba(0,0,0,0.4));
+        }
+
+        /* UI */
+        .ui { position: fixed; background: rgba(0,0,0,0.85); backdrop-filter: blur(10px); border: 1px solid var(--neon); padding: 12px; border-radius: 20px; z-index: 5000; }
+        .btn { position: fixed; bottom: 25px; left: 50%; transform: translateX(-50%); background: #000; border: 2px solid var(--neon); color: #fff; padding: 15px 30px; border-radius: 20px; font-weight: bold; z-index: 5000; }
         
-        .ui { position: fixed; background: rgba(0,0,0,0.8); border: 1px solid var(--neon); padding: 12px; border-radius: 20px; z-index: 5000; }
-        .btn { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #000; border: 2px solid var(--neon); color: #fff; padding: 15px 30px; border-radius: 15px; font-weight: bold; z-index: 5000; }
+        .dmg-text { position: absolute; color: var(--gold); font-weight: bold; animation: floatUp 1s forwards; pointer-events: none; z-index: 2000; }
+        @keyframes floatUp { to { transform: translateY(-100px) scale(1.5); opacity: 0; } }
     </style>
 </head>
 <body>
-    <div id="world">
-        <div id="cat">
-            <svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="40" fill="none" stroke="#00ffcc" stroke-width="5""")/>><text x="50" y="65" font-size="50" text-anchor="middle">🐈‍⬛</text></svg>
-        </div>
-        
-            <svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="45" fill="rgba(255,0,102,0.2)" stroke="#ff0066" stroke-width="5""")/>><text x="50" y="70" font-size="60" text-anchor="middle">👾</text></svg>
+    <div id="viewport">
+        <div id="world">
+            <div id="cat"></div>
+            </div>
         </div>
     </div>
     
     <div class="ui" style="top:15px; left:15px;">💰 <b id="bal">5000</b></div>
-    <div class="ui" style="top:15px; right:15px; border-color:var(--pink)">👾 HP: <b id="hp">1M</b></div>
-    <button class="btn" onclick="resetPos()">🏠 НАЙТИ КОТА</button>
+    <div class="ui" style="top:15px; right:15px; border-color:var(--pink)">👾 BOSS HP: <b id="hp">1M</b></div>
+    <button class="btn" onclick="resetPos()">🏠 В ЦЕНТР</button>
 
     <script>
         const tg = window.Telegram?.WebApp || { ready:()=>{}, expand:()=>{}, HapticFeedback:{impactOccurred:()=>{}} };
-        let state = { x: 3000, y: 3000, score: 5000, hp: 1000000 };
+        let state = JSON.parse(localStorage.getItem('cybercat_v28')) || { x: 3000, y: 3000, score: 5000, hp: 1000000 };
+        
         const world = document.getElementById('world');
         const cat = document.getElementById('cat');
+
+        function init() {
+            // Генерация HD леса
+            for(let i=0; i<40; i++) {
+                const t = document.createElement('div'); t.className = 'tree';
+                t.style.left = (Math.random()*5600+200)+'px'; t.style.top = (Math.random()*5600+200)+'px';
+                world.appendChild(t);
+            }
+            update(); tg.ready(); tg.expand();
+        }
 
         function update() {
             cat.style.left = state.x + 'px';
@@ -47,6 +88,7 @@ html
             world.style.transform = `translate(${-state.x + window.innerWidth/2}px, ${-state.y + window.innerHeight/2}px)`;
             document.getElementById('bal').innerText = Math.floor(state.score).toLocaleString();
             document.getElementById('hp').innerText = (state.hp/1000).toFixed(0) + 'K';
+            localStorage.setItem('cybercat_v28', JSON.stringify(state));
         }
 
         window.addEventListener('pointerdown', (e) => {
@@ -60,13 +102,21 @@ html
         document.getElementById('boss-entity').onclick = (e) => {
             e.stopPropagation();
             state.hp -= 5000; state.score += 1000;
+            showDmg(e.clientX, e.clientY, "+1000 💰");
             tg.HapticFeedback.impactOccurred('heavy');
             update();
         };
 
+        function showDmg(x, y, txt) {
+            const el = document.createElement('div'); el.className = 'dmg-text'; el.innerText = txt;
+            el.style.left = x + 'px'; el.style.top = y + 'px';
+            document.body.appendChild(el);
+            setTimeout(() => el.remove(), 1000);
+        }
+
         function resetPos() { state.x = 3000; state.y = 3000; update(); }
 
-        update(); tg.ready(); tg.expand();
+        init();
     </script>
 </body>
 </html>
