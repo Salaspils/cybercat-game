@@ -4,112 +4,131 @@ html
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>CyberCat: Profit v50</title>
-    <script src="https://cdnjs.cloudflare.com"></script>
+    <title>CyberCat: RTX Edition v53</title>
+    <!-- ИСПОЛЬЗУЕМ САМЫЙ СТАБИЛЬНЫЙ CDN ДЛЯ PC -->
+    <script src="https://unpkg.com"></script>
     <script src="https://telegram.org"></script>
     <style>
-        body { margin: 0; background: #010401; overflow: hidden; touch-action: none; font-family: sans-serif; }
-        #ui { position: fixed; top: 15px; width: 100%; display: flex; justify-content: space-between; z-index: 100; pointer-events: none; }
-        .glass { background: rgba(0,0,0,0.8); border: 1px solid #00ffcc; padding: 10px 25px; border-radius: 20px; color: #fff; margin: 0 15px; pointer-events: auto; box-shadow: 0 0 20px rgba(0,255,204,0.3); font-weight: bold; }
-        #logs { position: fixed; bottom: 20px; left: 20px; color: #00ffcc; font-size: 10px; opacity: 0.5; pointer-events: none; }
+        body { margin: 0; background: #000; overflow: hidden; font-family: 'Segoe UI', sans-serif; }
+        #ui { position: fixed; top: 15px; width: 100%; display: flex; justify-content: space-around; z-index: 100; pointer-events: none; }
+        .glass { background: rgba(0,255,204,0.15); backdrop-filter: blur(15px); border: 2px solid #00ffcc; padding: 12px 25px; border-radius: 20px; color: #00ffcc; font-weight: bold; box-shadow: 0 0 30px rgba(0,255,204,0.4); pointer-events: auto; }
+        #gpu-tag { position: fixed; bottom: 10px; right: 10px; color: #00ffcc; font-size: 10px; opacity: 0.5; }
     </style>
 </head>
 <body>
     <div id="ui">
         <div class="glass">💰 <span id="bal">0</span> $MEOW</div>
-        <div class="glass" style="border-color:#ff0066">⚡ <span id="nrg">100</span>%</div>
+        <div class="glass" style="border-color:#ff0066; color:#ff0066">⚡ <span id="nrg">100</span>%</div>
     </div>
-    <div id="logs">ENGINE: STANDBY...</div>
+    <div id="gpu-tag">GPU: RTX DETECTED | ULTRA MODE</div>
 
     <script>
         const tg = window.Telegram?.WebApp;
-        let db = JSON.parse(localStorage.getItem('cybercat_v50_core')) || { bal: 0, nrg: 100 };
+        let db = JSON.parse(localStorage.getItem('cc_v53')) || { bal: 0, nrg: 100 };
 
         // --- ENGINE INIT ---
         const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x020502);
-        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
-        const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+        scene.background = new THREE.Color(0x02050a);
+        scene.fog = new THREE.FogExp2(0x02050a, 0.01);
+
+        const camera = new THREE.PerspectiveCamera(65, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ 
+            antialias: true, 
+            powerPreference: "high-performance",
+            precision: "highp"
+        });
+        
         renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(window.devicePixelRatio);
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
         document.body.appendChild(renderer.domElement);
 
-        const light = new THREE.AmbientLight(0xffffff, 1.2);
-        scene.add(light);
-        const sun = new THREE.DirectionalLight(0xffffff, 1);
-        sun.position.set(10, 20, 10);
+        // --- ULTRA LIGHTING ---
+        const ambient = new THREE.AmbientLight(0xffffff, 0.5);
+        scene.add(ambient);
+        
+        const sun = new THREE.DirectionalLight(0xffffff, 1.5);
+        sun.position.set(20, 50, 20);
+        sun.castShadow = true;
+        sun.shadow.mapSize.width = 4096; // Для твоей 5070 Ti
+        sun.shadow.mapSize.height = 4096;
         scene.add(sun);
 
         // --- WORLD ---
-        const ground = new THREE.Mesh(new THREE.PlaneGeometry(1000, 1000), new THREE.MeshStandardMaterial({color: 0x1a2e1a}));
-        ground.rotation.x = -Math.PI/2;
-        scene.add(ground);
+        const ground = new THREE.Mesh(
+            new THREE.PlaneGeometry(1000, 1000), 
+            new THREE.MeshStandardMaterial({color: 0x1a2e1a, roughness: 0.8})
+        );
+        ground.rotation.x = -Math.PI/2; ground.receiveShadow = true; scene.add(ground);
         
-        const pond = new THREE.Mesh(new THREE.CircleGeometry(15, 32), new THREE.MeshStandardMaterial({color: 0x0077ff, transparent: true, opacity: 0.5}));
-        pond.rotation.x = -Math.PI/2; pond.position.set(-20, 0.05, -20);
+        const pond = new THREE.Mesh(
+            new THREE.CircleGeometry(15, 64), 
+            new THREE.MeshStandardMaterial({color: 0x0077ff, transparent: true, opacity: 0.7, metalness: 0.9, roughness: 0.1})
+        );
+        pond.rotation.x = -Math.PI/2; pond.position.set(-20, 0.1, -20);
         scene.add(pond);
 
-        // --- FAUNA (СИСТЕМА ЗАРАБОТКА) ---
-        const fauna = [];
-        const spawn = (type, x, z) => {
-            const group = new THREE.Group();
-            const color = type === 'duck' ? 0xffff00 : 0xffffff;
-            const body = new THREE.Mesh(new THREE.BoxGeometry(1, 0.8, 1.5), new THREE.MeshStandardMaterial({color}));
-            group.add(body); group.position.set(x, 0.4, z);
-            scene.add(group);
-            fauna.push({ mesh: group, target: new THREE.Vector3(x, 0.4, z), type, ready: true });
-        };
-        for(let i=0; i<8; i++) spawn(i%2===0?'duck':'goose', (Math.random()-0.5)*50, (Math.random()-0.5)*50);
-
-        // --- PLAYER ---
-        const player = new THREE.Mesh(new THREE.SphereGeometry(1, 16, 16), new THREE.MeshStandardMaterial({color: 0x00ffcc, emissive: 0x00ffcc, emissiveIntensity: 0.5}));
-        player.position.y = 1; scene.add(player);
+        // --- PLAYER (CYBER CAT) ---
+        const cat = new THREE.Mesh(
+            new THREE.SphereGeometry(1, 64, 64), 
+            new THREE.MeshStandardMaterial({color: 0x00ffcc, emissive: 0x00ffcc, emissiveIntensity: 0.8})
+        );
+        cat.position.y = 1; cat.castShadow = true; scene.add(cat);
         let target = new THREE.Vector3(0, 1, 0);
 
-        // --- CONTROLS & EARNING ---
-        window.addEventListener('pointerdown', (e) => {
+        // --- FAUNA (ANIMALS) ---
+        const fauna = [];
+        for(let i=0; i<10; i++) {
+            const animal = new THREE.Mesh(
+                new THREE.BoxGeometry(1.2, 1, 1.8), 
+                new THREE.MeshStandardMaterial({color: i%2===0?0xffff00:0xffffff})
+            );
+            animal.position.set((Math.random()-0.5)*60, 0.5, (Math.random()-0.5)*60);
+            animal.castShadow = true; scene.add(animal);
+            fauna.push({mesh: animal, target: animal.position.clone()});
+        }
+
+        // --- INTERACTION ---
+        window.addEventListener('mousedown', (e) => {
             const mouse = new THREE.Vector2((e.clientX/window.innerWidth)*2-1, -(e.clientY/window.innerHeight)*2+1);
             const ray = new THREE.Raycaster();
             ray.setFromCamera(mouse, camera);
-            
-            const hitFauna = ray.intersectObjects(fauna.map(a => a.mesh.children[0]));
-            if(hitFauna.length > 0) {
-                const animal = fauna.find(a => a.mesh.children[0] === hitFauna[0].object);
-                if(animal.ready && db.nrg >= 5) {
-                    db.bal += 10; db.nrg -= 5;
-                    animal.ready = false;
-                    animal.mesh.scale.set(0.5, 0.5, 0.5); // Визуальный эффект сбора
-                    setTimeout(() => { animal.ready = true; animal.mesh.scale.set(1, 1, 1); }, 5000);
-                    tg?.HapticFeedback.impactOccurred('medium');
-                    save();
-                }
-            } else {
-                const hitGround = ray.intersectObject(ground);
-                if(hitGround.length > 0) target.copy(hitGround.point).y = 1;
+            const hit = ray.intersectObject(ground);
+            if(hit.length > 0) {
+                target.copy(hit.point).y = 1;
+                if(db.nrg > 1) { db.bal += 1; db.nrg -= 0.5; save(); }
             }
         });
 
         function save() {
-            localStorage.setItem('cybercat_v50_core', JSON.stringify(db));
+            localStorage.setItem('cc_v53', JSON.stringify(db));
             document.getElementById('bal').innerText = Math.floor(db.bal);
             document.getElementById('nrg').innerText = Math.floor(db.nrg);
-            document.getElementById('logs').innerText = "ENGINE: ACTIVE | DATA SAVED";
         }
 
         function animate() {
             requestAnimationFrame(animate);
-            player.position.lerp(target, 0.1);
+            cat.position.lerp(target, 0.1);
+            
             fauna.forEach(a => {
-                if(Math.random() > 0.99) a.target.set((Math.random()-0.5)*60, 0.4, (Math.random()-0.5)*60);
-                const inWater = a.mesh.position.distanceTo(pond.position) < 15;
-                a.mesh.position.lerp(a.target, 0.02);
-                a.mesh.position.y = inWater ? 0.05 + Math.sin(Date.now()*0.002)*0.1 : 0.4;
+                if(Math.random() > 0.99) a.target.set((Math.random()-0.5)*80, 0.5, (Math.random()-0.5)*80);
+                a.mesh.position.lerp(a.target, 0.015);
                 a.mesh.lookAt(a.target);
             });
-            if(db.nrg < 100) { db.nrg += 0.01; save(); }
-            camera.position.lerp(new THREE.Vector3(player.position.x, 25, player.position.z + 30), 0.05);
-            camera.lookAt(player.position);
+
+            if(db.nrg < 100) db.nrg += 0.02;
+
+            camera.position.lerp(new THREE.Vector3(cat.position.x, 30, cat.position.z + 35), 0.05);
+            camera.lookAt(cat.position);
             renderer.render(scene, camera);
         }
+
+        window.addEventListener('resize', () => {
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+        });
 
         save(); animate(); tg?.ready();
     </script>
