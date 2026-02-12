@@ -4,45 +4,53 @@ html
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>CyberCat: Final Fix v58</title>
-    <script src="https://telegram.org"></script>
+    <title>CyberCat: Force Fix v59</title>
     <style>
-        body { margin: 0; background: #010301; overflow: hidden; font-family: 'Segoe UI', sans-serif; }
+        body { margin: 0; background: #000; overflow: hidden; font-family: 'Segoe UI', sans-serif; color: #00ffcc; }
         #ui { position: fixed; top: 15px; width: 100%; display: flex; justify-content: space-between; z-index: 100; pointer-events: none; }
-        .glass { background: rgba(0,0,0,0.85); border: 2px solid #00ffcc; padding: 10px 25px; border-radius: 20px; color: #fff; margin: 0 15px; pointer-events: auto; box-shadow: 0 0 25px #00ffcc55; font-weight: bold; }
-        #loading { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #00ffcc; text-align: center; z-index: 1000; }
+        .glass { background: rgba(0,0,0,0.8); border: 2px solid #00ffcc; padding: 10px 25px; border-radius: 20px; margin: 0 15px; pointer-events: auto; font-weight: bold; }
+        #loader { position: fixed; top: 50%; width: 100%; text-align: center; font-size: 24px; text-transform: uppercase; letter-spacing: 5px; }
     </style>
 </head>
 <body>
-    <div id="loading">ЗАПУСК КИБЕР-ЯДРА...</div>
+    <div id="loader">ЗАПУСК КИБЕР-ЯДРА...</div>
     <div id="ui">
         <div class="glass">💰 <span id="bal">0</span> $MEOW</div>
-        <div class="glass">⚡ <span id="nrg">100</span>%</div>
+        <div class="glass" style="border-color:#ff0066">⚡ <span id="nrg">100</span>%</div>
     </div>
 
+    <!-- ИСПОЛЬЗУЕМ IMPORT MAP ДЛЯ ОБХОДА CORS -->
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com"
+            }
+        }
+    </script>
+
     <script type="module">
-        // ИСПОЛЬЗУЕМ СИСТЕМНЫЙ ИМПОРТ (ОБХОД 404)
-        import * as THREE from 'https://cdn.skypack.dev';
+        import * as THREE from 'three';
 
-        const db = JSON.parse(localStorage.getItem('cc_v58')) || { bal: 0, nrg: 100 };
+        const db = JSON.parse(localStorage.getItem('cybercat_v59')) || { bal: 0, nrg: 100 };
 
-        function init() {
-            document.getElementById('loading').style.display = 'none';
+        try {
+            document.getElementById('loader').style.display = 'none';
 
+            // --- 3D ENGINE ---
             const scene = new THREE.Scene();
-            scene.background = new THREE.Color(0x1a2e1a); // СРАЗУ ЗЕЛЕНЫЙ ЛУГ
-            
+            scene.background = new THREE.Color(0x1a2e1a); // СТАНЕТ ЗЕЛЕНЫМ ПРИ ЗАПУСКЕ
+
             const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
             const renderer = new THREE.WebGLRenderer({ antialias: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.setPixelRatio(window.devicePixelRatio);
             document.body.appendChild(renderer.domElement);
 
-            scene.add(new THREE.AmbientLight(0xffffff, 1.5));
-            
+            scene.add(new THREE.AmbientLight(0xffffff, 2));
+
+            // Контрольный объект (Кот)
             const cat = new THREE.Mesh(
                 new THREE.SphereGeometry(1.2, 32, 32), 
-                new THREE.MeshStandardMaterial({color: 0x00ffcc, emissive: 0x00ffcc, emissiveIntensity: 0.5})
+                new THREE.MeshStandardMaterial({color: 0x00ffcc, emissive: 0x00ffcc})
             );
             cat.position.y = 1.2;
             scene.add(cat);
@@ -50,25 +58,26 @@ html
             camera.position.set(0, 10, 20);
             camera.lookAt(0, 0, 0);
 
-            let target = new THREE.Vector3(0, 1.2, 0);
-
-            window.addEventListener('mousedown', (e) => {
-                const mouse = new THREE.Vector2((e.clientX/window.innerWidth)*2-1, -(e.clientY/window.innerHeight)*2+1);
-                const ray = new THREE.Raycaster();
-                ray.setFromCamera(mouse, camera);
-                const hit = ray.intersectObject(new THREE.Mesh(new THREE.PlaneGeometry(1000,1000)));
-                if(hit) target.copy(hit.point).y = 1.2;
-            });
+            function updateUI() {
+                document.getElementById('bal').innerText = Math.floor(db.bal);
+                document.getElementById('nrg').innerText = Math.floor(db.nrg);
+                localStorage.setItem('cybercat_v59', JSON.stringify(db));
+            }
 
             function animate() {
                 requestAnimationFrame(animate);
-                cat.position.lerp(target, 0.1);
+                cat.rotation.y += 0.02;
                 renderer.render(scene, camera);
             }
-            animate();
-        }
 
-        window.onload = init;
+            updateUI();
+            animate();
+            console.log("RTX ENGINE: DEPLOYED");
+
+        } catch (e) {
+            document.getElementById('loader').innerHTML = "ОШИБКА КИБЕР-ЯДРА. <br> ОБНОВИ СТРАНИЦУ.";
+            console.error("Critical error:", e);
+        }
     </script>
 </body>
 </html>
