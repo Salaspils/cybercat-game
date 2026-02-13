@@ -3,24 +3,26 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>CyberCat v43.0: Force RTX</title>
+    <title>CyberCat v44.0: Beyond</title>
     <style>
-        body { margin: 0; overflow: hidden; background: #050200; font-family: 'Segoe UI', sans-serif; color: #fff; }
+        body { margin: 0; overflow: hidden; background: #020505; font-family: 'Segoe UI', sans-serif; color: #fff; }
         #ui { position: fixed; top: 20px; left: 20px; z-index: 100; pointer-events: none; }
-        .hud { background: rgba(0,0,0,0.9); border: 1px solid #00ffcc; padding: 15px; border-radius: 8px; box-shadow: 0 0 20px #00ffcc44; }
-        .btns { position: fixed; bottom: 30px; width: 100%; display: flex; justify-content: center; gap: 10px; pointer-events: auto; }
-        .btn { background: #000; color: #00ffcc; border: 1px solid #00ffcc; padding: 12px; cursor: pointer; font-weight: bold; text-transform: uppercase; font-size: 11px; }
-        #status { font-size: 10px; color: #ff00ff; margin-top: 5px; }
+        .hud { background: rgba(0,0,0,0.85); border-left: 4px solid #00ffcc; padding: 15px; border-radius: 4px; backdrop-filter: blur(10px); box-shadow: 10px 0 30px rgba(0,255,204,0.1); }
+        .btns { position: fixed; bottom: 30px; width: 100%; display: flex; justify-content: center; gap: 15px; pointer-events: auto; }
+        .btn { background: #000; color: #00ffcc; border: 1px solid #00ffcc; padding: 12px 30px; cursor: pointer; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; transition: 0.3s; }
+        .btn:hover { background: #00ffcc; color: #000; box-shadow: 0 0 20px #00ffcc; }
+        #gpu-tag { position: fixed; bottom: 85px; width: 100%; text-align: center; color: #00ffcc; font-size: 10px; opacity: 0.5; letter-spacing: 3px; }
     </style>
 </head>
 <body>
     <div id="ui">
         <div class="hud">
-            <div style="font-size: 20px; color: #00ffcc;">CYBERCAT_OS</div>
-            <div style="color: #ffcc00;">$MEOW: <b id="bal">0</b></div>
-            <div id="status">BYPASSING MIME-TYPE...</div>
+            <div style="font-size: 24px; color: #00ffcc; font-weight: 900;">CAT_OS v44.0</div>
+            <div style="color: #ffcc00; font-size: 20px;">$MEOW: <b id="bal">0</b></div>
+            <div id="status" style="font-size: 10px; color:#555;">GPU_ACCELERATION: MAX</div>
         </div>
     </div>
+    <div id="gpu-tag">RTX 5070 TI | ULTRA SHADERS ACTIVE</div>
     <div class="btns">
         <button class="btn" onclick="db.board = !db.board">🛹 BOOST</button>
         <button class="btn" onclick="buildHouse()">🏗️ BUILD (700)</button>
@@ -28,7 +30,6 @@
     </div>
 
     <script>
-        // ФОРСИРОВАННАЯ ЗАГРУЗКА (Обход ошибки MIME-Type)
         async function boot() {
             try {
                 const response = await fetch('three.min.js');
@@ -36,38 +37,38 @@
                 const script = document.createElement('script');
                 script.textContent = code;
                 document.head.appendChild(script);
-                document.getElementById('status').innerText = "ENGINE: INJECTED | RTX: ON";
                 initGame();
-            } catch (e) {
-                document.getElementById('status').innerText = "BOOT ERROR: " + e.message;
-            }
+            } catch (e) { document.getElementById('status').innerText = "BOOT ERROR"; }
         }
 
-        let db = JSON.parse(localStorage.getItem('cyber_v43')) || { bal: 1000, inv: 0, builds: [], board: false };
+        let db = JSON.parse(localStorage.getItem('cyber_v44')) || { bal: 1000, inv: 0, builds: [], board: false };
 
         function initGame() {
             const scene = new THREE.Scene();
-            scene.fog = new THREE.FogExp2(0x050200, 0.005);
-            const camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 0.1, 1500);
+            scene.fog = new THREE.FogExp2(0x020505, 0.005);
+            const camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 0.1, 2000);
             const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
             renderer.setSize(window.innerWidth, window.innerHeight);
             document.body.appendChild(renderer.domElement);
 
-            scene.add(new THREE.AmbientLight(0x4444ff, 0.5));
-            const sun = new THREE.PointLight(0xffaa44, 2, 800); sun.position.set(0, 100, 0); scene.add(sun);
-            scene.add(new THREE.GridHelper(1000, 40, 0x111111, 0x00ffcc));
+            // Освещение нового поколения
+            scene.add(new THREE.AmbientLight(0x00ffff, 0.3));
+            const sun = new THREE.PointLight(0x00ffcc, 2, 1000); sun.position.set(100, 200, 100); scene.add(sun);
+            scene.add(new THREE.GridHelper(2000, 60, 0x003333, 0x001111));
 
-            const player = new THREE.Mesh(new THREE.IcosahedronGeometry(1.5, 1), new THREE.MeshStandardMaterial({ color: 0x00ffcc, wireframe: true, emissive: 0x00ffcc }));
-            player.position.y = 1.5; scene.add(player);
-            let target = new THREE.Vector3(0, 1.5, 0);
+            // Игрок с эффектом свечения
+            const player = new THREE.Mesh(new THREE.IcosahedronGeometry(1.8, 2), new THREE.MeshStandardMaterial({ color: 0x00ffcc, wireframe: true, emissive: 0x00ffcc, emissiveIntensity: 2 }));
+            player.position.y = 1.8; scene.add(player);
+            let target = new THREE.Vector3(0, 1.8, 0);
 
+            // Срубы (Persistent)
             function createHouse(pos) {
                 const h = new THREE.Group();
-                for(let i=0; i<5; i++) {
-                    const log = new THREE.Mesh(new THREE.BoxGeometry(10, 1.2, 1.2), new THREE.MeshStandardMaterial({ color: 0x4d3020 }));
-                    log.position.y = i * 1.3; log.rotation.y = (i % 2) * Math.PI/2; h.add(log);
+                for(let i=0; i<6; i++) {
+                    const log = new THREE.Mesh(new THREE.BoxGeometry(14, 1.5, 1.5), new THREE.MeshStandardMaterial({ color: 0x221100, metalness: 0.5 }));
+                    log.position.y = i * 1.6; log.rotation.y = (i % 2) * Math.PI/2; h.add(log);
                 }
-                h.position.set(pos.x, 0.6, pos.z); scene.add(h);
+                h.position.set(pos.x, 0.7, pos.z); scene.add(h);
             }
             db.builds.forEach(p => createHouse(p));
 
@@ -79,26 +80,25 @@
                 const m = new THREE.Vector2((e.clientX/window.innerWidth)*2-1, -(e.clientY/window.innerHeight)*2+1);
                 ray.setFromCamera(m, camera);
                 const hit = new THREE.Vector3();
-                if(ray.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0,1,0), 0), hit)) target.copy(hit).y = 1.5;
+                if(ray.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0,1,0), 0), hit)) target.copy(hit).y = 1.8;
             });
 
             function save() {
-                localStorage.setItem('cyber_v43', JSON.stringify(db));
+                localStorage.setItem('cyber_v44', JSON.stringify(db));
                 document.getElementById('bal').innerText = Math.floor(db.bal);
             }
 
             function animate() {
                 requestAnimationFrame(animate);
-                player.position.lerp(target, db.board ? 0.3 : 0.1);
-                player.rotation.y += 0.05;
-                camera.position.lerp(new THREE.Vector3(player.position.x, 60, player.position.z + 80), 0.05);
+                player.position.lerp(target, db.board ? 0.3 : 0.08);
+                player.rotation.y += 0.03; player.rotation.z += 0.01;
+                camera.position.lerp(new THREE.Vector3(player.position.x, 70, player.position.z + 90), 0.04);
                 camera.lookAt(player.position);
                 renderer.render(scene, camera);
                 save();
             }
             save(); animate();
         }
-
         boot();
     </script>
 </body>
