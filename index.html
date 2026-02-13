@@ -4,124 +4,121 @@ html
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>CyberCat: Final Metaverse 21.0</title>
-    <!-- ИСПОЛЬЗУЕМ ЗЕРКАЛО, КОТОРОЕ РАБОТАЕТ В СНГ -->
+    <title>CyberCat: DX11 Metaverse</title>
+    <link rel="icon" href="data:,">
     <script src="https://cdn.jsdelivr.net"></script>
     <style>
-        body { margin: 0; overflow: hidden; background: #050200; font-family: sans-serif; }
-        #ui { position: fixed; top: 20px; left: 20px; z-index: 100; color: #fff; pointer-events: none; }
-        .hud { background: rgba(0,0,0,0.8); border: 2px solid #8b4513; padding: 15px; border-radius: 10px; backdrop-filter: blur(10px); }
-        #energy-bar { width: 200px; height: 10px; background: #222; border: 1px solid #ffcc00; margin-top: 10px; border-radius: 5px; overflow: hidden; }
-        #energy-fill { height: 100%; background: linear-gradient(90deg, #ffcc00, #ff6600); width: 100%; transition: 0.3s; }
-        .btns { position: fixed; bottom: 30px; width: 100%; display: flex; justify-content: center; gap: 15px; pointer-events: auto; }
-        .btn { background: #4a2c1d; color: #ffcc00; border: 2px solid #8b4513; padding: 12px 25px; cursor: pointer; font-weight: bold; text-transform: uppercase; border-radius: 5px; }
+        body { margin: 0; overflow: hidden; background: #000; font-family: 'Orbitron', sans-serif; color: #fff; }
+        #ui { position: fixed; top: 20px; left: 20px; z-index: 100; pointer-events: none; }
+        .hud { background: rgba(0,255,204,0.1); border: 1px solid #00ffcc; padding: 15px; border-radius: 12px; backdrop-filter: blur(15px); box-shadow: 0 0 20px rgba(0,255,204,0.3); }
+        #energy-bar { width: 150px; height: 8px; background: #111; margin-top: 10px; border-radius: 4px; border: 1px solid #00ffcc; overflow: hidden; }
+        #energy-fill { height: 100%; background: #00ffcc; width: 100%; transition: 0.3s; }
+        .controls { position: fixed; bottom: 30px; width: 100%; display: flex; justify-content: center; gap: 15px; pointer-events: auto; }
+        .btn { background: #000; border: 2px solid #00ffcc; color: #00ffcc; padding: 12px 25px; border-radius: 8px; font-weight: bold; cursor: pointer; text-transform: uppercase; letter-spacing: 1px; transition: 0.2s; }
+        .btn:hover { background: #00ffcc; color: #000; box-shadow: 0 0 30px #00ffcc; }
     </style>
 </head>
 <body>
     <div id="ui">
         <div class="hud">
-            <div style="font-size: 28px; color: #ffcc00;">$MEOW: <b id="bal">0</b></div>
+            <div style="font-size: 26px; font-weight: 900; color:#00ffcc">$MEOW: <span id="bal">0</span></div>
             <div id="energy-bar"><div id="energy-fill"></div></div>
-            <div style="margin-top:10px; font-size: 14px; color: #00ffcc;">BOSS HP: <span id="boss-hp">1,000,000</span></div>
+            <div style="margin-top:10px; font-size: 12px; color:#ff00ff">BOSS HP: <span id="boss-hp">1,000,000</span></div>
         </div>
     </div>
-
-    <div class="btns">
-        <button class="btn" onclick="toggleBoard()">🛹 ХОВЕРБОРД</button>
+    <div class="controls">
+        <button class="btn" onclick="db.board = !db.board">🛹 ХОВЕРБОРД</button>
         <button class="btn" onclick="buildLogCabin()">🏗️ СРУБ (700)</button>
-        <button class="btn" onclick="sellAll()" style="border-color:#00ffcc; color:#00ffcc">🏪 ПРОДАТЬ ВСЁ</button>
+        <button class="btn" onclick="sellAll()" style="border-color:#ff00ff; color:#ff00ff">🏪 РЫНОК</button>
     </div>
 
     <script>
-        let db = JSON.parse(localStorage.getItem('cybercat_v21')) || { bal: 1000, inv: 0, nrg: 100, board: false, bossHp: 1000000 };
+        let db = JSON.parse(localStorage.getItem('cybercat_v23')) || { bal: 1000, inv: 0, nrg: 100, board: false, bossHp: 1000000 };
 
         const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x1a0a05);
-        scene.fog = new THREE.FogExp2(0x1a0a05, 0.005);
-
-        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 3000);
+        scene.fog = new THREE.FogExp2(0x020205, 0.015);
+        const camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 0.1, 2000);
         const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.shadowMap.enabled = true;
+        renderer.setPixelRatio(window.devicePixelRatio);
         document.body.appendChild(renderer.domElement);
 
-        scene.add(new THREE.AmbientLight(0x222244, 0.6));
-        const sun = new THREE.DirectionalLight(0xffaa44, 2);
-        sun.position.set(100, 200, 100);
-        sun.castShadow = true;
-        scene.add(sun);
+        // ОСВЕЩЕНИЕ
+        scene.add(new THREE.AmbientLight(0x4040ff, 0.5));
+        const sun = new THREE.DirectionalLight(0x00ffcc, 1.5); sun.position.set(10, 20, 10); scene.add(sun);
 
-        const ground = new THREE.Mesh(new THREE.PlaneGeometry(3000, 3000), new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.9 }));
-        ground.rotation.x = -Math.PI / 2; ground.receiveShadow = true;
-        scene.add(ground);
+        // КИБЕР-СЕТКА
+        scene.add(new THREE.GridHelper(1000, 60, 0x00ffcc, 0x020205));
 
-        const player = new THREE.Mesh(new THREE.SphereGeometry(1.5, 32, 32), new THREE.MeshStandardMaterial({ color: 0xffcc00, metalness: 0.8 }));
-        player.position.y = 1.5; player.castShadow = true;
-        scene.add(player);
-        let targetPos = new THREE.Vector3(0, 1.5, 0);
+        // ИГРОК
+        const player = new THREE.Mesh(new THREE.IcosahedronGeometry(1.5, 2), new THREE.MeshStandardMaterial({ color: 0x00ffcc, emissive: 0x00ffcc, metalness: 1, roughness: 0 }));
+        player.position.y = 1.5; scene.add(player);
+        let target = new THREE.Vector3(0, 1.5, 0);
 
-        const entities = [];
-        function spawn(type, x, z) {
-            const group = new THREE.Group();
-            let mat = new THREE.MeshStandardMaterial({ color: type==='pig'?0xffaaaa:0x3d2b1f });
-            const body = new THREE.Mesh(new THREE.BoxGeometry(type==='pig'?2:1, 1, type==='pig'?3:1), mat);
-            group.add(body); group.position.set(x||(Math.random()-0.5)*500, 0.5, z||(Math.random()-0.5)*500);
-            group.userData = { type, value: type==='pig'?100:20 };
-            scene.add(group); entities.push(group);
+        // ЖИВОТНЫЕ (КУРЫ)
+        const animals = [];
+        for(let i=0; i<15; i++) {
+            const a = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.8, 1.2), new THREE.MeshStandardMaterial({ color: 0xffffff }));
+            a.position.set((Math.random()-0.5)*200, 0.6, (Math.random()-0.5)*200);
+            scene.add(a); animals.push(a);
         }
-        for(let i=0; i<20; i++) spawn('pig');
-        for(let i=0; i<40; i++) spawn('chicken');
 
-        // МИРОВОЙ БОСС (👾)
-        const boss = new THREE.Mesh(new THREE.OctahedronGeometry(10, 0), new THREE.MeshStandardMaterial({ color: 0xff00ff, emissive: 0xff00ff }));
+        // БОСС (👾)
+        const boss = new THREE.Mesh(new THREE.OctahedronGeometry(10), new THREE.MeshStandardMaterial({ color: 0xff00ff, emissive: 0xff00ff }));
         boss.position.set(0, 15, -100); scene.add(boss);
 
-        window.toggleBoard = () => { db.board = !db.board; updateUI(); };
+        window.addEventListener('pointerdown', (e) => {
+            const ray = new THREE.Raycaster();
+            const mouse = new THREE.Vector2((e.clientX/window.innerWidth)*2-1, -(e.clientY/window.innerHeight)*2+1);
+            ray.setFromCamera(mouse, camera);
+            const ground = new THREE.Plane(new THREE.Vector3(0,1,0), 0);
+            const hit = new THREE.Vector3();
+            if(ray.ray.intersectPlane(ground, hit)) {
+                target.copy(hit).y = 1.5;
+                if(hit.distanceTo(boss.position) < 30) { db.bossHp -= 1000; db.bal += 50; }
+            }
+        });
+
         window.buildLogCabin = () => {
             if(db.bal >= 700) {
                 db.bal -= 700;
-                const cabin = new THREE.Group();
+                const house = new THREE.Group();
+                const logMat = new THREE.MeshStandardMaterial({ color: 0x5d4037, roughness: 0.9 });
                 for(let i=0; i<5; i++) {
-                    const log = new THREE.Mesh(new THREE.CylinderGeometry(0.8, 0.8, 10, 8), new THREE.MeshStandardMaterial({ color: 0x5d4037 }));
-                    log.rotation.z = Math.PI/2; log.position.y = i*1.5; cabin.add(log);
+                    const log = new THREE.Mesh(new THREE.CylinderGeometry(0.8, 0.8, 10, 8), logMat);
+                    log.rotation.z = Math.PI/2; log.position.y = i*1.5; house.add(log);
                 }
-                cabin.position.set(player.position.x, 1, player.position.z); scene.add(cabin);
-                updateUI();
+                house.position.copy(player.position); scene.add(house);
             }
         };
-        window.sellAll = () => { if(db.inv > 0) { db.bal += db.inv; db.inv = 0; updateUI(); } };
 
-        window.addEventListener('pointerdown', (e) => {
-            const mouse = new THREE.Vector2((e.clientX/window.innerWidth)*2-1, -(e.clientY/window.innerHeight)*2+1);
-            const ray = new THREE.Raycaster(); ray.setFromCamera(mouse, camera);
-            const intersect = new THREE.Vector3(); ray.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0,1,0), 0), intersect);
-            targetPos.copy(intersect).y = 1.5;
-            if(intersect.distanceTo(boss.position) < 30) { db.bossHp -= 1000; db.bal += 50; updateUI(); }
-        });
-
-        function updateUI() {
-            document.getElementById('bal').innerText = Math.floor(db.bal);
-            document.getElementById('energy-fill').style.width = db.nrg + '%';
-            document.getElementById('boss-hp').innerText = db.bossHp.toLocaleString();
-            localStorage.setItem('cybercat_v21', JSON.stringify(db));
-        }
+        window.sellAll = () => { db.bal += db.inv * 20; db.inv = 0; };
 
         function animate() {
             requestAnimationFrame(animate);
-            player.position.lerp(targetPos, db.board ? 0.3 : 0.1);
-            boss.rotation.y += 0.02; boss.position.y = 15 + Math.sin(Date.now()*0.002)*5;
-            entities.forEach(ent => {
-                if(ent.position.distanceTo(player.position) < 5 && db.nrg > 5) {
-                    db.inv += ent.userData.value; db.nrg -= 2;
-                    ent.position.set((Math.random()-0.5)*500, 0.5, (Math.random()-0.5)*500);
+            player.position.lerp(target, db.board ? 0.25 : 0.1);
+            player.rotation.y += 0.05;
+            boss.rotation.y += 0.02;
+            
+            animals.forEach(a => {
+                a.rotation.y += 0.01;
+                if(a.position.distanceTo(player.position) < 5 && db.nrg > 5) {
+                    db.inv++; db.nrg -= 2;
+                    a.position.set((Math.random()-0.5)*200, 0.6, (Math.random()-0.5)*200);
                 }
             });
-            if(db.nrg < 100) db.nrg += 0.1;
-            camera.position.lerp(new THREE.Vector3(player.position.x, 40, player.position.z + 50), 0.05);
+
+            if(db.nrg < 100) db.nrg += 0.08;
+            camera.position.lerp(new THREE.Vector3(player.position.x, 35, player.position.z + 50), 0.05);
             camera.lookAt(player.position);
-            updateUI(); renderer.render(scene, camera);
+            
+            document.getElementById('bal').innerText = Math.floor(db.bal);
+            document.getElementById('boss-hp').innerText = db.bossHp.toLocaleString();
+            document.getElementById('energy-fill').style.width = db.nrg + '%';
+            localStorage.setItem('cybercat_v23', JSON.stringify(db));
+            renderer.render(scene, camera);
         }
-        updateUI(); animate();
+        animate();
     </script>
 </body>
 </html>
