@@ -3,130 +3,56 @@ html
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>CyberCat v38.2: RTX Master</title>
+    <title>CyberCat v39.0: Debug</title>
     <style>
-        body { margin: 0; overflow: hidden; background: #000; font-family: 'Segoe UI', sans-serif; color: #fff; }
-        #ui { position: fixed; top: 20px; left: 20px; z-index: 100; pointer-events: none; }
-        .hud { background: rgba(0,0,0,0.9); border: 2px solid #00ffcc; padding: 15px; border-radius: 8px; box-shadow: 0 0 20px #00ffcc44; }
-        .btns { position: fixed; bottom: 30px; width: 100%; display: flex; justify-content: center; gap: 15px; pointer-events: auto; }
-        .btn { background: #111; color: #00ffcc; border: 1px solid #00ffcc; padding: 12px 25px; cursor: pointer; font-weight: bold; border-radius: 5px; text-transform: uppercase; transition: 0.3s; }
-        .btn:hover { background: #00ffcc; color: #000; box-shadow: 0 0 15px #00ffcc; }
-        #gpu-tag { position: fixed; bottom: 85px; width: 100%; text-align: center; color: #ff00ff; font-size: 10px; letter-spacing: 2px; font-weight: bold; }
+        body { background: #000; color: #0f0; font-family: monospace; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; }
+        #diag { border: 1px solid #0f0; padding: 20px; background: rgba(0,20,0,1); line-height: 1.5; }
+        .err { color: #f00; font-weight: bold; }
+        .ok { color: #0f0; }
     </style>
 </head>
 <body>
-    <div id="ui">
-        <div class="hud">
-            <div style="font-size: 22px; color: #00ffcc; margin-bottom: 5px;">CYBER_CAT OS</div>
-            <div style="color: #ffcc00; font-size: 18px;">$MEOW: <b id="bal">0</b></div>
-            <div style="color: #ff00ff; font-size: 12px; margin-top: 5px;">BUILDS: <span id="b-count">0</span></div>
-        </div>
-    </div>
-    <div id="gpu-tag">RTX 5070 TI UNLEASHED | DX11 HIGH-SPEC MODE</div>
-    <div class="btns">
-        <button class="btn" onclick="db.board = !db.board">🛹 BOOST</button>
-        <button class="btn" onclick="buildHouse()">🏗️ BUILD (700)</button>
-        <button class="btn" onclick="sellAll()">🏪 MARKET</button>
+    <div id="diag">
+        <h2>🛰️ SYSTEM DIAGNOSTIC v39.0</h2>
+        <div id="step1">Тест CDN 1 (Unpkg): <span class="wait">...</span></div>
+        <div id="step2">Тест CDN 2 (jsDelivr): <span class="wait">...</span></div>
+        <div id="step3">Проверка WebGL: <span class="wait">...</span></div>
+        <hr>
+        <div id="final-status">ОЖИДАНИЕ ОТВЕТА БРАУЗЕРА...</div>
     </div>
 
     <script>
-        // Список проверенных CDN
-        const links = [
-            'https://unpkg.com',
-            'https://cdn.jsdelivr.net',
-            'https://cdnjs.cloudflare.com'
-        ];
-
-        function loadThree(idx) {
-            if (idx >= links.length) return alert("Engine failure!");
+        function check(id, url) {
             const s = document.createElement('script');
-            s.src = links[idx];
-            s.onload = () => initGame();
-            s.onerror = () => loadThree(idx + 1);
+            s.src = url;
+            s.onload = () => {
+                document.getElementById(id).innerHTML = "OK";
+                document.getElementById(id).className = "ok";
+                checkWebGL();
+            };
+            s.onerror = () => {
+                document.getElementById(id).innerHTML = "БЛОКИРОВКА (FAILED)";
+                document.getElementById(id).className = "err";
+                document.getElementById('final-status').innerHTML = "ОШИБКА: Браузер или расширение блокирует скрипт!";
+            };
             document.head.appendChild(s);
         }
 
-        let db = JSON.parse(localStorage.getItem('cyber_save_v38')) || { bal: 1000, inv: 0, board: false, builds: [] };
-
-        function initGame() {
-            const scene = new THREE.Scene();
-            scene.fog = new THREE.FogExp2(0x000000, 0.007);
-            const camera = new THREE.PerspectiveCamera(65, window.innerWidth/window.innerHeight, 0.1, 1500);
-            const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
-            renderer.setSize(window.innerWidth, window.innerHeight);
-            document.body.appendChild(renderer.domElement);
-
-            scene.add(new THREE.AmbientLight(0x4444ff, 0.5));
-            const sun = new THREE.DirectionalLight(0xffaa44, 1.2); sun.position.set(50, 100, 50); scene.add(sun);
-            scene.add(new THREE.GridHelper(1000, 50, 0x111111, 0x222222));
-
-            const player = new THREE.Mesh(new THREE.IcosahedronGeometry(1.5, 1), new THREE.MeshStandardMaterial({ color: 0x00ffcc, wireframe: true }));
-            player.position.y = 1.5; scene.add(player);
-            let target = new THREE.Vector3(0, 1.5, 0);
-
-            function createHouse(pos) {
-                const h = new THREE.Group();
-                for(let i=0; i<6; i++) {
-                    const log = new THREE.Mesh(new THREE.BoxGeometry(12, 1.3, 1.3), new THREE.MeshStandardMaterial({ color: 0x3d2b1f }));
-                    log.position.y = i * 1.4; log.rotation.y = (i % 2) * Math.PI/2; h.add(log);
-                }
-                h.position.set(pos.x, 0.7, pos.z); scene.add(h);
+        function checkWebGL() {
+            const canvas = document.createElement('canvas');
+            const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+            const res = document.getElementById('step3');
+            if (gl) {
+                res.innerHTML = "RTX ACTIVE"; res.className = "ok";
+                document.getElementById('final-status').innerHTML = "ПОБЕДА! Двигатель запущен. Если видишь это — обнови страницу с игрой.";
+            } else {
+                res.innerHTML = "GL_ERROR"; res.className = "err";
             }
-
-            db.builds.forEach(p => createHouse(p));
-
-            window.buildHouse = () => {
-                if(db.bal >= 700) {
-                    db.bal -= 700;
-                    const p = { x: player.position.x, z: player.position.z };
-                    db.builds.push(p); createHouse(p); save();
-                }
-            };
-
-            const animals = [];
-            for(let i=0; i<25; i++) {
-                const a = new THREE.Mesh(new THREE.BoxGeometry(1,1,1), new THREE.MeshStandardMaterial({ color: 0xff00ff, emissive: 0x220022 }));
-                a.position.set((Math.random()-0.5)*600, 0.6, (Math.random()-0.5)*600);
-                a.userData.v = 75; scene.add(a); animals.push(a);
-            }
-
-            window.sellAll = () => { db.bal += db.inv; db.inv = 0; save(); };
-
-            window.addEventListener('pointerdown', (e) => {
-                const ray = new THREE.Raycaster();
-                const m = new THREE.Vector2((e.clientX/window.innerWidth)*2-1, -(e.clientY/window.innerHeight)*2+1);
-                ray.setFromCamera(m, camera);
-                const hit = new THREE.Vector3();
-                if(ray.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0,1,0), 0), hit)) target.copy(hit).y = 1.5;
-            });
-
-            function save() {
-                localStorage.setItem('cyber_save_v38', JSON.stringify(db));
-                document.getElementById('bal').innerText = Math.floor(db.bal);
-                document.getElementById('b-count').innerText = db.builds.length;
-            }
-
-            function animate() {
-                requestAnimationFrame(animate);
-                player.position.lerp(target, db.board ? 0.25 : 0.1);
-                player.rotation.y += 0.05;
-                animals.forEach(a => {
-                    a.rotation.y += 0.03;
-                    if(a.position.distanceTo(player.position) < 5) {
-                        db.inv += a.userData.v;
-                        a.position.set((Math.random()-0.5)*600, 0.6, (Math.random()-0.5)*600);
-                    }
-                });
-                camera.position.lerp(new THREE.Vector3(player.position.x, 60, player.position.z + 70), 0.05);
-                camera.lookAt(player.position);
-                renderer.render(scene, camera);
-                save();
-            }
-            save(); animate();
         }
 
-        loadThree(0);
+        // Запуск тестов
+        check('step1', 'https://unpkg.com');
+        check('step2', 'https://cdn.jsdelivr.net');
     </script>
 </body>
 </html>
