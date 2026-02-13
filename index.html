@@ -2,104 +2,174 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>CyberCat v44.0: Beyond</title>
+    <title>CyberCat v50.0: Ultimate Farm</title>
     <style>
-        body { margin: 0; overflow: hidden; background: #020505; font-family: 'Segoe UI', sans-serif; color: #fff; }
+        body { margin: 0; overflow: hidden; background: #000; font-family: 'Segoe UI', sans-serif; }
         #ui { position: fixed; top: 20px; left: 20px; z-index: 100; pointer-events: none; }
-        .hud { background: rgba(0,0,0,0.85); border-left: 4px solid #00ffcc; padding: 15px; border-radius: 4px; backdrop-filter: blur(10px); box-shadow: 10px 0 30px rgba(0,255,204,0.1); }
-        .btns { position: fixed; bottom: 30px; width: 100%; display: flex; justify-content: center; gap: 15px; pointer-events: auto; }
-        .btn { background: #000; color: #00ffcc; border: 1px solid #00ffcc; padding: 12px 30px; cursor: pointer; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; transition: 0.3s; }
-        .btn:hover { background: #00ffcc; color: #000; box-shadow: 0 0 20px #00ffcc; }
-        #gpu-tag { position: fixed; bottom: 85px; width: 100%; text-align: center; color: #00ffcc; font-size: 10px; opacity: 0.5; letter-spacing: 3px; }
+        .hud { background: rgba(0,0,0,0.85); border: 2px solid #ffcc00; padding: 15px; border-radius: 8px; color: #fff; backdrop-filter: blur(15px); width: 220px; }
+        .bar { height: 10px; background: #333; margin: 5px 0; border-radius: 5px; overflow: hidden; }
+        #energy-fill { width: 100%; height: 100%; background: #00ffcc; transition: 0.3s; }
+        .btns { position: fixed; bottom: 30px; width: 100%; display: flex; justify-content: center; gap: 10px; pointer-events: auto; }
+        .btn { background: #1a1a1a; color: #ffcc00; border: 1px solid #ffcc00; padding: 12px; cursor: pointer; font-size: 10px; text-transform: uppercase; font-weight: bold; }
+        #clock { font-size: 28px; font-weight: 900; color: #ffcc00; }
     </style>
 </head>
 <body>
     <div id="ui">
         <div class="hud">
-            <div style="font-size: 24px; color: #00ffcc; font-weight: 900;">CAT_OS v44.0</div>
-            <div style="color: #ffcc00; font-size: 20px;">$MEOW: <b id="bal">0</b></div>
-            <div id="status" style="font-size: 10px; color:#555;">GPU_ACCELERATION: MAX</div>
+            <div id="clock">12:00</div>
+            <div style="font-size: 10px; opacity: 0.7;">$MEOW: <b id="bal">0</b></div>
+            <div style="font-size: 10px; margin-top:10px;">ЭНЕРГИЯ КОТА:</div>
+            <div class="bar"><div id="energy-fill"></div></div>
+            <div id="status" style="font-size: 9px; color: #00ffcc; margin-top:5px;">STATUS: STABLE</div>
         </div>
     </div>
-    <div id="gpu-tag">RTX 5070 TI | ULTRA SHADERS ACTIVE</div>
     <div class="btns">
-        <button class="btn" onclick="db.board = !db.board">🛹 BOOST</button>
-        <button class="btn" onclick="buildHouse()">🏗️ BUILD (700)</button>
-        <button class="btn" onclick="sellAll()">🏪 MARKET</button>
+        <button class="btn" onclick="db.board = !db.board">🛹 БУСТ</button>
+        <button class="btn" onclick="buildShed()">🏗️ САРАЙ (900)</button>
+        <button class="btn" onclick="plantGarden()">🌱 ОГОРОД (150)</button>
+        <button class="btn" onclick="sellAll()">🏪 РЫНОК</button>
     </div>
 
     <script>
         async function boot() {
             try {
-                const response = await fetch('three.min.js');
-                const code = await response.text();
-                const script = document.createElement('script');
-                script.textContent = code;
-                document.head.appendChild(script);
-                initGame();
-            } catch (e) { document.getElementById('status').innerText = "BOOT ERROR"; }
+                const resp = await fetch('three.min.js');
+                const code = await resp.text();
+                const script = document.createElement('script'); script.textContent = code;
+                document.head.appendChild(script); init();
+            } catch (e) { alert("Engine Error!"); }
         }
 
-        let db = JSON.parse(localStorage.getItem('cyber_v44')) || { bal: 1000, inv: 0, builds: [], board: false };
+        let db = JSON.parse(localStorage.getItem('cyber_v50')) || { 
+            bal: 1000, builds: [], gardens: [], energy: 100, time: 1.5, board: false 
+        };
 
-        function initGame() {
+        function init() {
             const scene = new THREE.Scene();
-            scene.fog = new THREE.FogExp2(0x020505, 0.005);
-            const camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 0.1, 2000);
-            const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+            const camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 0.1, 3000);
+            const renderer = new THREE.WebGLRenderer({ antialias: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.shadowMap.enabled = true;
             document.body.appendChild(renderer.domElement);
 
-            // Освещение нового поколения
-            scene.add(new THREE.AmbientLight(0x00ffff, 0.3));
-            const sun = new THREE.PointLight(0x00ffcc, 2, 1000); sun.position.set(100, 200, 100); scene.add(sun);
-            scene.add(new THREE.GridHelper(2000, 60, 0x003333, 0x001111));
+            // СВЕТ
+            const sun = new THREE.DirectionalLight(0xffccaa, 1.2); sun.castShadow = true; scene.add(sun);
+            const moon = new THREE.DirectionalLight(0x4444ff, 0.5); scene.add(moon);
+            scene.add(new THREE.AmbientLight(0xffffff, 0.1));
 
-            // Игрок с эффектом свечения
-            const player = new THREE.Mesh(new THREE.IcosahedronGeometry(1.8, 2), new THREE.MeshStandardMaterial({ color: 0x00ffcc, wireframe: true, emissive: 0x00ffcc, emissiveIntensity: 2 }));
-            player.position.y = 1.8; scene.add(player);
-            let target = new THREE.Vector3(0, 1.8, 0);
+            // ЗВЕЗДЫ И ТРАВА
+            const ground = new THREE.Mesh(new THREE.PlaneGeometry(2000, 2000), new THREE.MeshStandardMaterial({ color: 0x1a2e10 }));
+            ground.rotation.x = -Math.PI/2; ground.receiveShadow = true; scene.add(ground);
 
-            // Срубы (Persistent)
-            function createHouse(pos) {
-                const h = new THREE.Group();
-                for(let i=0; i<6; i++) {
-                    const log = new THREE.Mesh(new THREE.BoxGeometry(14, 1.5, 1.5), new THREE.MeshStandardMaterial({ color: 0x221100, metalness: 0.5 }));
-                    log.position.y = i * 1.6; log.rotation.y = (i % 2) * Math.PI/2; h.add(log);
-                }
-                h.position.set(pos.x, 0.7, pos.z); scene.add(h);
+            const cat = new THREE.Group();
+            const body = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.8, 2.2), new THREE.MeshStandardMaterial({color: 0x222}));
+            body.position.y = 0.4; body.castShadow = true; cat.add(body);
+            scene.add(cat);
+            let target = new THREE.Vector3(0, 0, 0);
+
+            // МЕХАНИКА ОГОРОДА
+            const plants = [];
+            function createGarden(pos, level = 0) {
+                const g = new THREE.Group();
+                const soil = new THREE.Mesh(new THREE.BoxGeometry(6, 0.2, 6), new THREE.MeshStandardMaterial({color: 0x3d2b1f}));
+                g.add(soil);
+                const sprout = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.5, 0.1), new THREE.MeshStandardMaterial({color: 0x22ff22}));
+                sprout.position.y = 0.5; g.add(sprout);
+                g.position.set(pos.x, 0, pos.z);
+                g.userData = { level: level, lastGrow: Date.now() };
+                scene.add(g); plants.push(g);
             }
-            db.builds.forEach(p => createHouse(p));
+            db.gardens.forEach(p => createGarden(p.pos, p.level));
 
-            window.buildHouse = () => { if(db.bal >= 700) { db.bal -= 700; const p = { x: player.position.x, z: player.position.z }; db.builds.push(p); createHouse(p); save(); } };
-            window.sellAll = () => { db.bal += db.inv; db.inv = 0; save(); };
+            window.plantGarden = () => {
+                if(db.bal >= 150) {
+                    db.bal -= 150; const p = {x: cat.position.x + 5, z: cat.position.z};
+                    db.gardens.push({pos: p, level: 0}); createGarden(p); save();
+                }
+            };
+
+            function createShed(pos) {
+                const s = new THREE.Group();
+                const wall = new THREE.Mesh(new THREE.BoxGeometry(15, 12, 15), new THREE.MeshStandardMaterial({color: 0x3d2b1f, side: 2}));
+                wall.position.y = 6; s.add(wall);
+                // Миска со сметаной (восстанавливает энергию)
+                const bowl = new THREE.Mesh(new THREE.CylinderGeometry(1, 1, 0.5), new THREE.MeshStandardMaterial({color: 0xeee}));
+                bowl.position.set(0, 0.3, 0); s.add(bowl);
+                s.position.set(pos.x, 0, pos.z); scene.add(s);
+            }
+            db.builds.forEach(p => createShed(p));
+
+            window.buildShed = () => {
+                if(db.bal >= 900) {
+                    db.bal -= 900; const p = {x: cat.position.x, z: cat.position.z};
+                    db.builds.push(p); createShed(p); save();
+                }
+            };
 
             window.addEventListener('pointerdown', (e) => {
-                const ray = new THREE.Raycaster();
                 const m = new THREE.Vector2((e.clientX/window.innerWidth)*2-1, -(e.clientY/window.innerHeight)*2+1);
-                ray.setFromCamera(m, camera);
+                const ray = new THREE.Raycaster(); ray.setFromCamera(m, camera);
                 const hit = new THREE.Vector3();
-                if(ray.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0,1,0), 0), hit)) target.copy(hit).y = 1.8;
+                if(ray.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0,1,0), 0), hit)) target.copy(hit);
             });
 
             function save() {
-                localStorage.setItem('cyber_v44', JSON.stringify(db));
+                localStorage.setItem('cyber_v50', JSON.stringify(db));
                 document.getElementById('bal').innerText = Math.floor(db.bal);
+                document.getElementById('energy-fill').style.width = db.energy + "%";
             }
 
             function animate() {
                 requestAnimationFrame(animate);
-                player.position.lerp(target, db.board ? 0.3 : 0.08);
-                player.rotation.y += 0.03; player.rotation.z += 0.01;
-                camera.position.lerp(new THREE.Vector3(player.position.x, 70, player.position.z + 90), 0.04);
-                camera.lookAt(player.position);
+                db.time += 0.00005; // 1 час игры = 5 минут реала
+                
+                let dayScale = (db.time % (Math.PI*2)) / (Math.PI*2);
+                document.getElementById('clock').innerText = Math.floor(dayScale * 24).toString().padStart(2, '0') + ":" + Math.floor((dayScale * 1440) % 60).toString().padStart(2, '0');
+
+                sun.position.set(Math.sin(db.time)*800, Math.cos(db.time)*800, 300);
+                const isDay = Math.cos(db.time) > 0;
+                scene.background = new THREE.Color().setHSL(0.6, 0.4, isDay ? 0.4 : 0.02);
+
+                // ЛОГИКА ЭНЕРГИИ
+                if(cat.position.distanceTo(target) > 1) {
+                    db.energy -= db.board ? 0.05 : 0.01;
+                    if(db.energy < 0) { db.energy = 0; db.board = false; }
+                }
+                
+                // КОРМЕЖКА В САРАЕ
+                db.builds.forEach(b => {
+                    if(cat.position.distanceTo(new THREE.Vector3(b.x, 0, b.z)) < 5) {
+                        db.energy = Math.min(100, db.energy + 0.5);
+                        document.getElementById('status').innerText = "ПИТАНИЕ: СМЕТАНА +++";
+                    }
+                });
+
+                // РОСТ РАСТЕНИЙ
+                plants.forEach((g, i) => {
+                    if(Date.now() - g.userData.lastGrow > 10000 && g.userData.level < 5) {
+                        g.children[1].scale.y += 0.5;
+                        g.children[1].position.y += 0.25;
+                        g.userData.level++;
+                        g.userData.lastGrow = Date.now();
+                        db.gardens[i].level = g.userData.level;
+                    }
+                    if(g.userData.level >= 5 && cat.position.distanceTo(g.position) < 4) {
+                        db.bal += 100; g.userData.level = 0; g.children[1].scale.y = 1; g.children[1].position.y = 0.5;
+                        document.getElementById('status').innerText = "УРОЖАЙ СОБРАН!";
+                    }
+                });
+
+                cat.position.lerp(target, (db.energy > 0 ? (db.board ? 0.25 : 0.08) : 0.02));
+                cat.lookAt(target.x, 0, target.z);
+
+                camera.position.lerp(new THREE.Vector3(cat.position.x, 70, cat.position.z + 80), 0.05);
+                camera.lookAt(cat.position);
                 renderer.render(scene, camera);
                 save();
             }
-            save(); animate();
+            boot(); animate();
         }
-        boot();
     </script>
 </body>
 </html>
