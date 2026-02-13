@@ -4,66 +4,120 @@ html
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>CyberCat Wealth 2026</title>
-    <!-- УБИРАЕМ ОШИБКУ 404 В CHROME -->
-    <link rel="icon" href="data:,">
+    <title>CyberCat Wealth: Shaders ON</title>
+    <!-- ПОДКЛЮЧАЕМ ПРОФЕССИОНАЛЬНОЕ ЯДРО ЧЕРЕЗ АЗИАТСКОЕ ЗЕРКАЛО -->
+    <script src="https://cdn.jsdelivr.net"></script>
     <style>
-        body { margin: 0; overflow: hidden; background: radial-gradient(circle, #050a15 0%, #000 100%); color: #00ffcc; font-family: sans-serif; perspective: 1200px; }
-        #ui { position: absolute; top: 30px; left: 30px; z-index: 100; pointer-events: none; }
-        .stat { font-size: 42px; font-weight: 900; text-shadow: 0 0 25px #00ffcc; letter-spacing: 2px; }
-        .miner-info { font-size: 14px; color: #ff00ff; margin-top: 10px; opacity: 0.9; font-family: monospace; }
-        
-        #world { position: absolute; top: 55%; left: 50%; width: 480px; height: 480px; transform: translate(-50%, -50%) rotateX(55deg) rotateZ(35deg); transform-style: preserve-3d; }
-        .grid { display: grid; grid-template-columns: repeat(3, 140px); gap: 20px; transform-style: preserve-3d; }
-        
-        .plot { width: 140px; height: 140px; background: #1a0f08; border: 2px solid #5c4033; cursor: pointer; position: relative; transform-style: preserve-3d; transition: 0.3s; }
-        .plot:hover { border-color: #00ffcc; background: #2a180d; }
-        
-        /* ИСПРАВЛЕННЫЕ КРИСТАЛЛЫ (БЕЗ СТРЕЛОК) */
-        .crystal { 
-            position: absolute; bottom: 20px; left: 45px; 
-            width: 50px; height: 100px; 
-            background: #00ffcc; 
-            clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
-            transform: rotateX(-90deg) translateZ(50px); 
-            display: none; box-shadow: 0 0 30px #00ffcc;
-            animation: pulse 1.5s infinite ease-in-out;
-        }
-        .ready { background: #ff00ff !important; box-shadow: 0 0 50px #ff00ff !important; }
-        
-        @keyframes pulse { 0%, 100% { transform: rotateX(-90deg) translateZ(50px) scale(1); } 50% { transform: rotateX(-90deg) translateZ(70px) scale(1.1); } }
+        body { margin: 0; overflow: hidden; background: #000; color: #00ffcc; font-family: 'Orbitron', sans-serif; }
+        #ui { position: absolute; top: 30px; left: 30px; z-index: 10; pointer-events: none; }
+        .stat { font-size: 45px; font-weight: 900; text-shadow: 0 0 20px #00ffcc; }
+        #loader { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); font-family: monospace; letter-spacing: 3px; }
     </style>
 </head>
 <body>
     <div id="ui">
         <div class="stat">$MEOW: <span id="balance">0</span></div>
-        <div class="miner-info">STATUS: <span style="color:#00ffcc">CORE_STABLE</span> | ID: <span id="uid">...</span></div>
+        <div style="color: #ff00ff; font-size: 14px; margin-top:10px;">GPU SHADERS: ACTIVE | ENGINE: WebGL 2.0</div>
     </div>
-    <div id="world"><div class="grid" id="farm"></div></div>
+    <div id="loader">ИНИЦИАЛИЗАЦИЯ GPU...</div>
+
     <script>
-        const farm = document.getElementById('farm');
-        let balance = parseInt(localStorage.getItem('meow_bal')) || 0;
-        let userId = localStorage.getItem('meow_user_id') || ('BY-' + Math.random().toString(36).substr(2, 7).toUpperCase());
-        localStorage.setItem('meow_user_id', userId);
-        document.getElementById('uid').innerText = userId;
-        document.getElementById('balance').innerText = balance;
-        for (let i = 0; i < 9; i++) {
-            const plot = document.createElement('div');
-            plot.className = 'plot';
-            plot.innerHTML = '<div class="crystal"></div>';
-            plot.onclick = () => {
-                const crys = plot.querySelector('.crystal');
-                const state = plot.dataset.state || 'empty';
-                if (state === 'empty') {
-                    plot.dataset.state = 'growing'; crys.style.display = 'block'; crys.classList.remove('ready');
-                    setTimeout(() => { plot.dataset.state = 'ready'; crys.classList.add('ready'); }, 1200);
-                } else if (state === 'ready') {
-                    balance += 10; document.getElementById('balance').innerText = balance;
-                    localStorage.setItem('meow_bal', balance);
-                    crys.style.display = 'none'; plot.dataset.state = 'empty';
-                }
+        window.onload = () => {
+            if (typeof THREE === 'undefined') {
+                document.getElementById('loader').innerHTML = "<b style='color:red'>СЕРВЕР ШЕЙДЕРОВ ЗАБЛОКИРОВАН. ВКЛЮЧИ VPN!</b>";
+                return;
+            }
+            document.getElementById('loader').style.display = 'none';
+            startShaders();
+        };
+
+        function startShaders() {
+            const scene = new THREE.Scene();
+            scene.fog = new THREE.FogExp2(0x020205, 0.05);
+            
+            const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(window.devicePixelRatio);
+            document.body.appendChild(renderer.domElement);
+
+            // СВЕТ (Шейдерные тени)
+            const sun = new THREE.PointLight(0x00ffcc, 2, 50);
+            sun.position.set(5, 10, 5);
+            scene.add(sun);
+            scene.add(new THREE.AmbientLight(0x4040ff, 0.3));
+
+            // ПОЧВА (Кибер-сетка)
+            const gridHelper = new THREE.GridHelper(60, 20, 0x00ffcc, 0x020205);
+            scene.add(gridHelper);
+
+            // ГРЯДКИ (Объемные блоки)
+            const plots = [];
+            const createPlot = (x, z) => {
+                const geo = new THREE.BoxGeometry(3.5, 0.5, 3.5);
+                const mat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.1, metalness: 0.8 });
+                const plot = new THREE.Mesh(geo, mat);
+                plot.position.set(x, 0.25, z);
+                plot.userData = { status: 'empty' };
+                scene.add(plot);
+                plots.push(plot);
             };
-            farm.appendChild(plot);
+
+            for(let i=-1; i<=1; i++) for(let j=-1; j<=1; j++) createPlot(i*6, j*6);
+
+            camera.position.set(0, 15, 20);
+            camera.lookAt(0, 0, 0);
+
+            // МЕХАНИКА МАЙНИНГА
+            let balance = parseInt(localStorage.getItem('meow_bal')) || 0;
+            document.getElementById('balance').innerText = balance;
+
+            const raycaster = new THREE.Raycaster();
+            const mouse = new THREE.Vector2();
+
+            window.addEventListener('mousedown', (e) => {
+                mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+                mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+                raycaster.setFromCamera(mouse, camera);
+                const hits = raycaster.intersectObjects(plots);
+
+                if (hits.length > 0) {
+                    const p = hits[0].object;
+                    if (p.userData.status === 'empty') {
+                        p.userData.status = 'growing';
+                        const crystalGeo = new THREE.OctahedronGeometry(1.2);
+                        const crystalMat = new THREE.MeshPhongMaterial({ color: 0x00ffcc, emissive: 0x00ffcc, shininess: 100 });
+                        const crystal = new THREE.Mesh(crystalGeo, crystalMat);
+                        crystal.position.set(p.position.x, 2, p.position.z);
+                        scene.add(crystal);
+                        p.userData.crystal = crystal;
+
+                        setTimeout(() => {
+                            p.userData.status = 'ready';
+                            crystal.material.color.set(0xff00ff);
+                            crystal.material.emissive.set(0xff00ff);
+                        }, 1500);
+                    } else if (p.userData.status === 'ready') {
+                        balance += 10;
+                        document.getElementById('balance').innerText = balance;
+                        localStorage.setItem('meow_bal', balance);
+                        scene.remove(p.userData.crystal);
+                        p.userData.status = 'empty';
+                    }
+                }
+            });
+
+            function animate() {
+                requestAnimationFrame(animate);
+                plots.forEach(p => {
+                    if (p.userData.crystal) {
+                        p.userData.crystal.rotation.y += 0.05;
+                        p.userData.crystal.position.y = 2 + Math.sin(Date.now() * 0.005) * 0.5;
+                    }
+                });
+                renderer.render(scene, camera);
+            }
+            animate();
         }
     </script>
 </body>
