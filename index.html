@@ -3,28 +3,27 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>CyberCat v42.0: RTX Unleashed</title>
-    <!-- ПОДКЛЮЧЕНИЕ ЛОКАЛЬНОГО ФАЙЛА, КОТОРЫЙ МЫ СОЗДАЛИ В ШАГЕ 1 -->
-    <script src="three.min.js"></script>
+    <title>CyberCat v42.5: RTX Unleashed</title>
+    <script src="three.min.js?v=1"></script>
     <style>
-        body { margin: 0; overflow: hidden; background: #050200; font-family: 'Segoe UI', monospace; color: #fff; }
+        body { margin: 0; overflow: hidden; background: #050200; font-family: 'Segoe UI', sans-serif; color: #fff; }
         #ui { position: fixed; top: 20px; left: 20px; z-index: 100; pointer-events: none; }
-        .hud { background: rgba(0,0,0,0.9); border: 2px solid #00ffcc; padding: 15px; border-radius: 8px; box-shadow: 0 0 20px #00ffcc44; backdrop-filter: blur(10px); }
+        .hud { background: rgba(0,0,0,0.9); border: 2px solid #00ffcc; padding: 15px; border-radius: 12px; backdrop-filter: blur(10px); box-shadow: 0 0 30px rgba(0,255,204,0.2); }
         .btns { position: fixed; bottom: 30px; width: 100%; display: flex; justify-content: center; gap: 15px; pointer-events: auto; }
-        .btn { background: #111; color: #00ffcc; border: 1px solid #00ffcc; padding: 12px 25px; cursor: pointer; font-weight: bold; border-radius: 5px; text-transform: uppercase; transition: 0.3s; }
-        .btn:hover { background: #00ffcc; color: #000; box-shadow: 0 0 15px #00ffcc; }
-        #gpu-tag { position: fixed; bottom: 85px; width: 100%; text-align: center; color: #ff00ff; font-size: 10px; letter-spacing: 2px; font-weight: bold; text-shadow: 0 0 5px #ff00ff; }
+        .btn { background: #1a1a1a; color: #00ffcc; border: 2px solid #00ffcc; padding: 12px 25px; cursor: pointer; font-weight: bold; border-radius: 8px; text-transform: uppercase; transition: 0.2s; }
+        .btn:hover { background: #00ffcc; color: #000; box-shadow: 0 0 20px #00ffcc; }
+        #gpu-tag { position: fixed; bottom: 85px; width: 100%; text-align: center; color: #ff00ff; font-size: 10px; font-weight: bold; letter-spacing: 2px; }
     </style>
 </head>
 <body>
     <div id="ui">
         <div class="hud">
-            <div style="font-size: 22px; color: #00ffcc; margin-bottom: 5px; letter-spacing: 2px;">CYBER_OS v42.0</div>
-            <div style="color: #ffcc00; font-size: 18px;">$MEOW: <b id="bal">0</b></div>
-            <div id="status" style="color: #0f0; font-size: 10px; margin-top: 5px;">ENGINE: INITIALIZING...</div>
+            <div style="font-size: 24px; color: #00ffcc; margin-bottom: 5px;">CYBERCAT_OS</div>
+            <div style="color: #ffcc00; font-size: 20px;">$MEOW: <b id="bal">0</b></div>
+            <div id="status" style="color: #0f0; font-size: 11px; margin-top: 5px;">BOOTING CORE...</div>
         </div>
     </div>
-    <div id="gpu-tag">RTX 5070 TI HARDWARE ACCELERATION: ACTIVE</div>
+    <div id="gpu-tag">RTX 5070 TI: HARDWARE ACCELERATION ACTIVE</div>
     <div class="btns">
         <button class="btn" onclick="db.board = !db.board">🛹 BOOST</button>
         <button class="btn" onclick="buildHouse()">🏗️ СРУБ (700)</button>
@@ -32,45 +31,38 @@
     </div>
 
     <script>
-        // Детектор движка
         const statusText = document.getElementById('status');
         if (typeof THREE === 'undefined') {
-            statusText.innerText = "CRITICAL ERROR: three.min.js NOT FOUND";
+            statusText.innerText = "ERROR: three.min.js NOT LOADED YET. WAIT 1 MIN AND CTRL+F5";
             statusText.style.color = "red";
         } else {
-            statusText.innerText = "ENGINE: LOCAL_STABLE (RTX ON)";
-            initGame();
+            statusText.innerText = "ENGINE: LOCAL_STABLE | RTX: ON";
+            init();
         }
 
-        let db = JSON.parse(localStorage.getItem('cyber_v42_save')) || { bal: 1000, inv: 0, builds: [], board: false };
+        let db = JSON.parse(localStorage.getItem('cyber_v42')) || { bal: 1000, inv: 0, builds: [], board: false };
 
-        function initGame() {
+        function init() {
             const scene = new THREE.Scene();
-            scene.fog = new THREE.FogExp2(0x050200, 0.007);
-            const camera = new THREE.PerspectiveCamera(65, window.innerWidth/window.innerHeight, 0.1, 1000);
+            scene.fog = new THREE.FogExp2(0x050200, 0.006);
+            const camera = new THREE.PerspectiveCamera(65, window.innerWidth/window.innerHeight, 0.1, 1500);
             const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
             renderer.setSize(window.innerWidth, window.innerHeight);
             renderer.setPixelRatio(window.devicePixelRatio);
             document.body.appendChild(renderer.domElement);
 
-            // Свет и окружение
-            scene.add(new THREE.AmbientLight(0x4444ff, 0.5));
-            const sun = new THREE.DirectionalLight(0xffaa44, 1.2); sun.position.set(50, 100, 50); scene.add(sun);
+            scene.add(new THREE.AmbientLight(0x4444ff, 0.4));
+            const sun = new THREE.DirectionalLight(0xffaa44, 1.5); sun.position.set(50, 100, 50); scene.add(sun);
             scene.add(new THREE.GridHelper(1000, 50, 0x111111, 0x222222));
 
-            // Игрок (Световая сфера)
-            const player = new THREE.Mesh(
-                new THREE.IcosahedronGeometry(1.5, 1), 
-                new THREE.MeshStandardMaterial({ color: 0x00ffcc, wireframe: true, emissive: 0x00ffcc, emissiveIntensity: 0.5 })
-            );
+            const player = new THREE.Mesh(new THREE.IcosahedronGeometry(1.5, 1), new THREE.MeshStandardMaterial({ color: 0x00ffcc, wireframe: true, emissive: 0x00ffcc, emissiveIntensity: 0.5 }));
             player.position.y = 1.5; scene.add(player);
             let target = new THREE.Vector3(0, 1.5, 0);
 
-            // Система построек
             function createHouse(pos) {
                 const h = new THREE.Group();
                 for(let i=0; i<6; i++) {
-                    const log = new THREE.Mesh(new THREE.BoxGeometry(12, 1.3, 1.3), new THREE.MeshStandardMaterial({ color: 0x3d2b1f }));
+                    const log = new THREE.Mesh(new THREE.BoxGeometry(12, 1.3, 1.3), new THREE.MeshStandardMaterial({ color: 0x4d3020 }));
                     log.position.y = i * 1.4; log.rotation.y = (i % 2) * Math.PI/2; h.add(log);
                 }
                 h.position.set(pos.x, 0.7, pos.z); scene.add(h);
@@ -85,12 +77,11 @@
                 }
             };
 
-            // Ферма (Розовые кубы)
             const animals = [];
-            for(let i=0; i<30; i++) {
-                const a = new THREE.Mesh(new THREE.BoxGeometry(1,1,1), new THREE.MeshStandardMaterial({ color: 0xff00ff, emissive: 0x220022 }));
-                a.position.set((Math.random()-0.5)*600, 0.6, (Math.random()-0.5)*600);
-                a.userData.v = 80; scene.add(a); animals.push(a);
+            for(let i=0; i<40; i++) {
+                const a = new THREE.Mesh(new THREE.BoxGeometry(1.2, 1.2, 1.2), new THREE.MeshStandardMaterial({ color: 0xff00ff, emissive: 0x330033 }));
+                a.position.set((Math.random()-0.5)*700, 0.6, (Math.random()-0.5)*700);
+                a.userData.v = 90; scene.add(a); animals.push(a);
             }
 
             window.sellAll = () => { db.bal += db.inv; db.inv = 0; save(); };
@@ -104,7 +95,7 @@
             });
 
             function save() {
-                localStorage.setItem('cyber_v42_save', JSON.stringify(db));
+                localStorage.setItem('cyber_v42', JSON.stringify(db));
                 document.getElementById('bal').innerText = Math.floor(db.bal);
             }
 
@@ -113,10 +104,9 @@
                 player.position.lerp(target, db.board ? 0.3 : 0.1);
                 player.rotation.y += 0.05;
                 animals.forEach(a => {
-                    a.rotation.y += 0.03;
-                    if(a.position.distanceTo(player.position) < 5) {
+                    if(a.position.distanceTo(player.position) < 6) {
                         db.inv += a.userData.v;
-                        a.position.set((Math.random()-0.5)*600, 0.6, (Math.random()-0.5)*600);
+                        a.position.set((Math.random()-0.5)*700, 0.6, (Math.random()-0.5)*700);
                     }
                 });
                 camera.position.lerp(new THREE.Vector3(player.position.x, 60, player.position.z + 70), 0.05);
