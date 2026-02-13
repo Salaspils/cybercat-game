@@ -4,87 +4,77 @@ html
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>CyberCat v29.5: Direct Render</title>
+    <title>CyberCat v33.0: NVIDIA Core</title>
     <link rel="icon" href="data:,">
+    <!-- ПРЯМАЯ ССЫЛКА НА БИБЛИОТЕКУ -->
     <script src="https://cdnjs.cloudflare.com"></script>
     <style>
-        body { margin: 0; overflow: hidden; background: #050200; color: #00ffcc; font-family: sans-serif; }
+        body { margin: 0; overflow: hidden; background: #000; color: #00ffcc; font-family: 'Segoe UI', sans-serif; }
         #ui { position: fixed; top: 20px; left: 20px; z-index: 100; pointer-events: none; }
-        .hud { background: rgba(0,0,0,0.8); border: 1px solid #00ffcc; padding: 15px; border-radius: 12px; }
-        .btns { position: fixed; bottom: 30px; width: 100%; display: flex; justify-content: center; gap: 10px; pointer-events: auto; }
-        .btn { background: #000; border: 1px solid #00ffcc; color: #00ffcc; padding: 10px 15px; cursor: pointer; font-weight: bold; border-radius: 5px; }
-        #fallback-msg { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; display: none; }
+        .hud { background: rgba(0,0,0,0.85); border: 2px solid #00ffcc; padding: 20px; border-radius: 15px; box-shadow: 0 0 30px #00ffcc55; }
+        .btn { background: #000; border: 2px solid #00ffcc; color: #00ffcc; padding: 10px 20px; cursor: pointer; font-weight: bold; border-radius: 8px; pointer-events: auto; text-transform: uppercase; }
+        #loading { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; }
     </style>
 </head>
 <body>
     <div id="ui">
         <div class="hud">
-            <div style="font-size: 24px; font-weight: 900;">$MEOW: <span id="bal">0</span></div>
-            <div style="font-size: 10px; color:#ff00ff">STATUS: <span id="engine-status">INITIALIZING...</span></div>
+            <div style="font-size: 32px; font-weight: 900;">$MEOW: <span id="bal">0</span></div>
+            <div style="font-size: 10px; color:#ff00ff; margin-top:5px;">SYSTEM: <span id="engine-info">WAITING...</span></div>
+            <div style="margin-top:15px; display:flex; gap:10px;">
+                <button class="btn" onclick="saveToKey()">💾 КЛЮЧ</button>
+                <button class="btn" onclick="loadFromKey()">🔑 ВОЙТИ</button>
+            </div>
         </div>
     </div>
-    <div id="fallback-msg">
-        <h2 style="color:yellow">ОШИБКА РЕНДЕРИНГА</h2>
-        <p>Ваш браузер блокирует 3D-ядро.</p>
-        <button class="btn" onclick="startLegacyMode()">ЗАПУСТИТЬ В 2D РЕЖИМЕ</button>
-    </div>
-    <div class="btns">
-        <button class="btn" onclick="saveToKey()">💾 КЛЮЧ</button>
-        <button class="btn" onclick="loadFromKey()">🔑 ВОЙТИ</button>
-    </div>
+    <div id="loading">ИНИЦИАЛИЗАЦИЯ NVIDIA ENGINE...</div>
 
     <script>
-        let db = JSON.parse(localStorage.getItem('cybercat_zenith')) || { bal: 1000, inv: 0, uid: 'BY-' + Math.random().toString(36).substr(2, 5).toUpperCase() };
-        function saveToKey() { prompt("КЛЮЧ:", btoa(JSON.stringify(db))); }
-        function loadFromKey() { const k = prompt("КЛЮЧ:"); if(k) { db = JSON.parse(atob(k)); localStorage.setItem('cybercat_zenith', JSON.stringify(db)); location.reload(); } }
+        let db = JSON.parse(localStorage.getItem('cybercat_v33')) || { bal: 1000, uid: 'BY-' + Math.random().toString(36).substr(2, 6).toUpperCase() };
+        function saveToKey() { prompt("ТВОЙ КЛЮЧ:", btoa(JSON.stringify(db))); }
+        function loadFromKey() { const k = prompt("ВСТАВЬ КЛЮЧ:"); if(k) { try { db = JSON.parse(atob(k)); localStorage.setItem('cybercat_v33', JSON.stringify(db)); location.reload(); } catch(e) { alert("Ошибка ключа!"); } } }
 
         window.onload = () => {
             try {
-                if (typeof THREE === 'undefined') throw new Error('NoThree');
-                init3D();
-                document.getElementById('engine-status').innerText = '3D CORE ACTIVE';
+                if (typeof THREE === 'undefined') throw new Error('CDN_ERROR');
+                
+                const scene = new THREE.Scene();
+                const camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 0.1, 1000);
+                
+                const renderer = new THREE.WebGLRenderer({ 
+                    antialias: true, 
+                    powerPreference: "high-performance" // ЗАПРОС К RTX 5070
+                });
+                renderer.setSize(window.innerWidth, window.innerHeight);
+                document.body.appendChild(renderer.domElement);
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('engine-info').innerText = 'NVIDIA_GPU_ACTIVE';
+
+                // МИР (НЕОНОВАЯ СЕТКА)
+                scene.add(new THREE.GridHelper(500, 50, 0x00ffcc, 0x020205));
+                
+                // ОБЪЕКТ (ЦЕНТРАЛЬНЫЙ КРИСТАЛЛ)
+                const crystal = new THREE.Mesh(
+                    new THREE.IcosahedronGeometry(3, 0), 
+                    new THREE.MeshNormalMaterial({ wireframe: false }) // Цвета радуги
+                );
+                crystal.position.y = 5; scene.add(crystal);
+                
+                camera.position.set(0, 20, 35); camera.lookAt(0, 5, 0);
+
+                function animate() {
+                    requestAnimationFrame(animate);
+                    crystal.rotation.y += 0.03;
+                    crystal.position.y = 5 + Math.sin(Date.now() * 0.005) * 1;
+                    renderer.render(scene, camera);
+                }
+                animate();
+
             } catch (e) {
-                console.error(e);
-                document.getElementById('fallback-msg').style.display = 'block';
-                document.getElementById('engine-status').innerText = 'ERROR: FALLBACK READY';
+                document.getElementById('loading').innerHTML = "<h2 style='color:red'>СБОЙ ИНИЦИАЛИЗАЦИИ</h2><p>Нажми Ctrl+F5 или проверь chrome://gpu</p>";
             }
         };
-
-        function init3D() {
-            const scene = new THREE.Scene();
-            const camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 0.1, 1000);
-            const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, failIfMajorPerformanceCaveat: false });
-            renderer.setSize(window.innerWidth, window.innerHeight);
-            document.body.appendChild(renderer.domElement);
-
-            scene.add(new THREE.GridHelper(500, 50, 0x00ffcc, 0x020205));
-            const player = new THREE.Mesh(new THREE.SphereGeometry(1.5), new THREE.MeshBasicMaterial({ color: 0x00ffcc, wireframe: true }));
-            player.position.y = 1.5; scene.add(player);
-            
-            camera.position.set(0, 30, 45);
-            camera.lookAt(0, 0, 0);
-
-            function animate() {
-                requestAnimationFrame(animate);
-                player.rotation.y += 0.02;
-                renderer.render(scene, camera);
-            }
-            animate();
-        }
-
-        function startLegacyMode() {
-            document.getElementById('fallback-msg').innerHTML = `
-                <div style="border: 2px solid #00ffcc; padding: 20px; background: #000;">
-                    <h3>МАЙНИНГ АКТИВИРОВАН</h3>
-                    <button class="btn" style="font-size:20px" onclick="db.bal += 10; updateUI();">КЛИКАТЬ $MEOW</button>
-                </div>`;
-        }
-
-        function updateUI() {
-            document.getElementById('bal').innerText = Math.floor(db.bal);
-            localStorage.setItem('cybercat_zenith', JSON.stringify(db));
-        }
-        updateUI();
+        document.getElementById('bal').innerText = Math.floor(db.bal);
     </script>
 </body>
 </html>
