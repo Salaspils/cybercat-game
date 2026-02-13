@@ -4,107 +4,118 @@ html
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>CyberCat v37.0: RTX Master</title>
-    <link rel="icon" href="data:,">
+    <title>CyberCat v37.8: Eternal</title>
     <script src="https://cdnjs.cloudflare.com"></script>
     <style>
-        body { margin: 0; overflow: hidden; background: #050200; font-family: sans-serif; color: #fff; }
+        body { margin: 0; overflow: hidden; background: #050200; font-family: 'Courier New', monospace; color: #fff; }
         #ui { position: fixed; top: 20px; left: 20px; z-index: 100; pointer-events: none; }
-        .hud { background: rgba(0,0,0,0.85); border: 2px solid #8b4513; padding: 15px; border-radius: 12px; backdrop-filter: blur(10px); }
-        .btns { position: fixed; bottom: 30px; width: 100%; display: flex; justify-content: center; gap: 15px; pointer-events: auto; }
-        .btn { background: #4a2c1d; color: #ffcc00; border: 2px solid #8b4513; padding: 10px 20px; cursor: pointer; font-weight: bold; border-radius: 8px; }
-        #gpu-tag { position: fixed; bottom: 100px; width: 100%; text-align: center; color: #00ffcc; font-size: 10px; font-weight: bold; }
+        .hud { background: rgba(0,0,0,0.9); border: 1px solid #00ffcc; padding: 15px; border-radius: 4px; }
+        .btns { position: fixed; bottom: 30px; width: 100%; display: flex; justify-content: center; gap: 10px; pointer-events: auto; }
+        .btn { background: #000; color: #00ffcc; border: 1px solid #00ffcc; padding: 12px; cursor: pointer; font-size: 11px; text-transform: uppercase; font-weight: bold; }
+        .btn:hover { background: #00ffcc; color: #000; box-shadow: 0 0 10px #00ffcc; }
+        #gpu-tag { position: fixed; bottom: 85px; width: 100%; text-align: center; color: #ff00ff; font-size: 9px; letter-spacing: 1px; }
     </style>
 </head>
 <body>
     <div id="ui">
         <div class="hud">
-            <div style="font-size: 28px; color: #ffcc00;">$MEOW: <b id="bal">0</b></div>
-            <div style="font-size: 12px; color:#ff00ff; margin-top:5px;">ID: <span id="uid">...</span></div>
-            <div style="font-size: 12px; color:#00ffcc">BOSS HP: <span id="boss-hp">1M</span></div>
+            <div style="font-size: 18px; color: #00ffcc; margin-bottom:5px;">CORE_V37.8</div>
+            <div style="color: #ffcc00;">$MEOW: <b id="bal">0</b></div>
+            <div style="color: #ff00ff; font-size: 11px;">BUILDS: <span id="build-count">0</span></div>
+            <div style="font-size: 10px; color:#666; margin-top:5px;">ID: <span id="uid">...</span></div>
         </div>
     </div>
-    <div id="gpu-tag">GPU: NVIDIA RTX 5070 TI ACTIVE | RENDER: HIGH-SPEC</div>
+    <div id="gpu-tag">RTX 5070 TI HARDWARE ACCELERATION: ACTIVE</div>
     <div class="btns">
-        <button class="btn" onclick="db.board = !db.board">🛹 БУСТ</button>
+        <button class="btn" onclick="toggleBoard()">🛹 BOOST</button>
         <button class="btn" onclick="buildHouse()">🏗️ СРУБ (700)</button>
-        <button class="btn" onclick="db.bal += db.inv; db.inv = 0; updateUI();" style="border-color:#00ffcc; color:#00ffcc">🏪 РЫНОК</button>
+        <button class="btn" onclick="sellAll()">🏪 MARKET</button>
+        <button class="btn" onclick="resetData()" style="border-color: red; color: red;">🗑️ RESET</button>
     </div>
 
     <script>
-        let db = JSON.parse(localStorage.getItem('cybercat_v37')) || {
-            bal: 1000, inv: 0, board: false, bossHp: 1000000, uid: 'BY-' + Math.random().toString(36).substr(2, 6).toUpperCase()
+        let db = JSON.parse(localStorage.getItem('cybercat_v37_save')) || { 
+            bal: 1000, inv: 0, board: false, builds: [], 
+            uid: 'RTX-' + Math.random().toString(36).substr(2, 5).toUpperCase() 
         };
 
         const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x1a0a05);
-        scene.fog = new THREE.FogExp2(0x1a0a05, 0.005);
-        const camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 0.1, 2000);
+        scene.fog = new THREE.FogExp2(0x050200, 0.008);
+        const camera = new THREE.PerspectiveCamera(65, window.innerWidth/window.innerHeight, 0.1, 1000);
         const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
         renderer.setSize(window.innerWidth, window.innerHeight);
         document.body.appendChild(renderer.domElement);
 
-        scene.add(new THREE.AmbientLight(0x222244, 0.6));
-        const sun = new THREE.DirectionalLight(0xffaa44, 2); sun.position.set(100, 200, 100); scene.add(sun);
-        scene.add(new THREE.GridHelper(1000, 80, 0x8b4513, 0x111111));
+        scene.add(new THREE.AmbientLight(0x4444ff, 0.6));
+        const sun = new THREE.PointLight(0xffaa44, 2, 600); sun.position.set(0, 50, 0); scene.add(sun);
+        scene.add(new THREE.GridHelper(1000, 50, 0x222222, 0x111111));
 
-        const player = new THREE.Mesh(new THREE.SphereGeometry(1.5, 32, 32), new THREE.MeshStandardMaterial({ color: 0xffcc00, metalness: 0.8 }));
+        const player = new THREE.Mesh(new THREE.IcosahedronGeometry(1.5, 1), new THREE.MeshStandardMaterial({ color: 0x00ffcc, wireframe: true }));
         player.position.y = 1.5; scene.add(player);
         let target = new THREE.Vector3(0, 1.5, 0);
 
-        const animals = [];
-        function spawn(type) {
-            const body = new THREE.Mesh(new THREE.BoxGeometry(type==='pig'?2:1, 1, type==='pig'?3:1), new THREE.MeshStandardMaterial({ color: type==='pig'?0xffaaaa:0x3d2b1f }));
-            body.position.set((Math.random()-0.5)*400, 0.5, (Math.random()-0.5)*400);
-            body.userData = { type, val: type==='pig'?50:10 }; scene.add(body); animals.push(body);
+        function createHouse(pos) {
+            const h = new THREE.Group();
+            for(let i=0; i<6; i++) {
+                const log = new THREE.Mesh(new THREE.BoxGeometry(12, 1.3, 1.3), new THREE.MeshStandardMaterial({ color: 0x4d3020 }));
+                log.position.y = i * 1.4; log.rotation.y = (i % 2) * Math.PI/2; h.add(log);
+            }
+            h.position.set(pos.x, 0.7, pos.z); scene.add(h);
         }
-        for(let i=0; i<30; i++) spawn('chicken'); for(let i=0; i<10; i++) spawn('pig');
 
-        const boss = new THREE.Mesh(new THREE.OctahedronGeometry(10), new THREE.MeshStandardMaterial({ color: 0xff00ff, emissive: 0xff00ff }));
-        boss.position.set(0, 15, -100); scene.add(boss);
+        db.builds.forEach(p => createHouse(p));
 
         window.buildHouse = () => {
             if(db.bal >= 700) {
                 db.bal -= 700;
-                const cabin = new THREE.Group();
-                for(let i=0; i<5; i++) {
-                    const log = new THREE.Mesh(new THREE.CylinderGeometry(0.8, 0.8, 10, 8), new THREE.MeshStandardMaterial({ color: 0x5d4037 }));
-                    log.rotation.z = Math.PI/2; log.position.y = i*1.5; cabin.add(log);
-                }
-                cabin.position.copy(player.position); scene.add(cabin);
+                const p = { x: player.position.x, z: player.position.z };
+                db.builds.push(p); createHouse(p); save();
             }
         };
 
+        const animals = [];
+        for(let i=0; i<30; i++) {
+            const a = new THREE.Mesh(new THREE.BoxGeometry(1.2, 1.2, 1.2), new THREE.MeshStandardMaterial({ color: 0xff00ff, emissive: 0x330033 }));
+            a.position.set((Math.random()-0.5)*500, 0.6, (Math.random()-0.5)*500);
+            a.userData.val = 60; scene.add(a); animals.push(a);
+        }
+
+        window.toggleBoard = () => { db.board = !db.board; player.scale.setScalar(db.board ? 1.5 : 1); };
+        window.sellAll = () => { db.bal += db.inv; db.inv = 0; save(); };
+        window.resetData = () => { localStorage.removeItem('cybercat_v37_save'); location.reload(); };
+
         window.addEventListener('pointerdown', (e) => {
+            const ray = new THREE.Raycaster();
             const mouse = new THREE.Vector2((e.clientX/window.innerWidth)*2-1, -(e.clientY/window.innerHeight)*2+1);
-            const ray = new THREE.Raycaster(); ray.setFromCamera(mouse, camera);
-            const hit = new THREE.Vector3(); ray.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0,1,0), 0), hit);
-            target.copy(hit).y = 1.5;
-            if(hit.distanceTo(boss.position) < 30) { db.bossHp -= 5000; db.bal += 100; }
+            ray.setFromCamera(mouse, camera);
+            const hit = new THREE.Vector3();
+            if(ray.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0,1,0), 0), hit)) target.copy(hit).y = 1.5;
         });
 
-        function updateUI() {
+        function save() {
+            localStorage.setItem('cybercat_v37_save', JSON.stringify(db));
             document.getElementById('bal').innerText = Math.floor(db.bal);
-            document.getElementById('boss-hp').innerText = db.bossHp.toLocaleString();
+            document.getElementById('build-count').innerText = db.builds.length;
             document.getElementById('uid').innerText = db.uid;
-            localStorage.setItem('cybercat_v37', JSON.stringify(db));
         }
 
         function animate() {
             requestAnimationFrame(animate);
-            player.position.lerp(target, db.board ? 0.3 : 0.1);
-            boss.rotation.y += 0.02;
-            animals.forEach(ent => {
-                if(ent.position.distanceTo(player.position) < 5) {
-                    db.inv += ent.userData.val;
-                    ent.position.set((Math.random()-0.5)*400, 0.5, (Math.random()-0.5)*400);
+            player.position.lerp(target, db.board ? 0.25 : 0.08);
+            player.rotation.y += 0.02;
+            animals.forEach(a => {
+                a.rotation.y += 0.05;
+                if(a.position.distanceTo(player.position) < 5) {
+                    db.inv += a.userData.val;
+                    a.position.set((Math.random()-0.5)*500, 0.6, (Math.random()-0.5)*500);
                 }
             });
-            camera.position.lerp(new THREE.Vector3(player.position.x, 40, player.position.z + 50), 0.05);
+            camera.position.lerp(new THREE.Vector3(player.position.x, 60, player.position.z + 70), 0.05);
             camera.lookAt(player.position);
-            updateUI(); renderer.render(scene, camera);
+            renderer.render(scene, camera);
+            save();
         }
-        updateUI(); animate();
+        save(); animate();
     </script>
 </body>
 </html>
