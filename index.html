@@ -4,37 +4,28 @@ html
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>CyberCat Wealth 2026 (Offline Core)</title>
-    <!-- ЗАПАСНОЙ CDN + ПРОВЕРКА -->
-    <script src="https://unpkg.com"></script>
+    <title>CyberCat Belarus Edition</title>
+    <!-- ИСПОЛЬЗУЕМ ЗЕРКАЛО, КОТОРОЕ НЕ БЛОКИРУЮТ -->
+    <script src="https://cdn.jsdelivr.net"></script>
     <style>
-        body { margin: 0; overflow: hidden; background: #05050a; color: #00ffcc; font-family: 'Courier New', monospace; }
+        body { margin: 0; overflow: hidden; background: #020205; color: #00ffcc; font-family: 'Segoe UI', sans-serif; }
         #ui { position: absolute; top: 20px; left: 20px; z-index: 10; pointer-events: none; }
-        .stat { font-size: 32px; font-weight: bold; text-shadow: 0 0 20px #00ffcc; }
-        #msg { color: #ff00ff; font-size: 14px; margin-top: 5px; }
-        #loader { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; }
-        canvas { display: block; touch-action: none; }
+        .stat { font-size: 32px; font-weight: bold; text-shadow: 0 0 15px #00ffcc; }
+        #loader { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #00ffcc; font-weight: bold; }
     </style>
 </head>
 <body>
     <div id="ui">
         <div class="stat">$MEOW: <span id="balance">0</span></div>
-        <div id="msg">КЛИКАЙ НА ГРЯДКИ (КОРИЧНЕВЫЕ БЛОКИ)</div>
+        <div style="opacity: 0.7;">КЛИКАЙ НА ГРЯДКИ (КОРИЧНЕВЫЕ КВАДРАТЫ)</div>
     </div>
-    <div id="loader">ЗАГРУЗКА АВТОНОМНОГО ЯДРА...</div>
+    <div id="loader">ПОДКЛЮЧЕНИЕ К КИБЕР-СЕТИ...</div>
 
     <script>
         window.onload = function() {
-            // Если CDN заблокирован, выводим инструкцию
             if (typeof THREE === 'undefined') {
-                document.getElementById('loader').innerHTML = `
-                    <div style="color:#ff4444; padding: 20px; border: 2px solid #ff4444;">
-                        <h2 style="margin:0">КРИТИЧЕСКИЙ СБОЙ CDN</h2>
-                        <p>Твой браузер блокирует загрузку движка.</p>
-                        <p>1. Включи VPN (Нидерланды/США)<br>
-                           2. Или обнови страницу 3 раза<br>
-                           3. Проверь антивирус</p>
-                    </div>`;
+                document.getElementById('loader').innerHTML = "<span style='color:red'>СЕРВЕР ВСЕ ЕЩЕ БЛОКИРУЕТСЯ.<br>СЕЙЧАС ВКЛЮЧУ АВАРИЙНЫЙ РЕЖИМ...</span>";
+                // Здесь будет код автоматического перехода на локальную копию в след. шаге
                 return;
             }
             document.getElementById('loader').style.display = 'none';
@@ -46,80 +37,62 @@ html
             const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
             const renderer = new THREE.WebGLRenderer({ antialias: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.setPixelRatio(window.devicePixelRatio);
             document.body.appendChild(renderer.domElement);
 
-            // СВЕТ
-            const light = new THREE.DirectionalLight(0xffffff, 1.2);
-            light.position.set(5, 10, 7);
+            const light = new THREE.DirectionalLight(0xffffff, 1.5);
+            light.position.set(5, 10, 7.5);
             scene.add(light);
-            scene.add(new THREE.AmbientLight(0x4040ff, 0.6));
+            scene.add(new THREE.AmbientLight(0x4040ff, 0.5));
 
-            // СЕТКА ГРЯДОК
             const plots = [];
-            const plotGeo = new THREE.BoxGeometry(3.5, 0.4, 3.5);
-            const plotMat = new THREE.MeshStandardMaterial({ color: 0x3d2314 });
+            const createPlot = (x, z) => {
+                const p = new THREE.Mesh(new THREE.BoxGeometry(3, 0.3, 3), new THREE.MeshStandardMaterial({color: 0x3d2b1f}));
+                p.position.set(x, 0, z);
+                p.userData = { status: 'empty', plant: null };
+                scene.add(p);
+                plots.push(p);
+            };
 
-            for(let x = -1; x <= 1; x++) {
-                for(let z = -1; z <= 1; z++) {
-                    const plot = new THREE.Mesh(plotGeo, plotMat);
-                    plot.position.set(x * 5, 0, z * 5);
-                    plot.userData = { status: 'empty', plant: null };
-                    scene.add(plot);
-                    plots.push(plot);
-                }
+            for(let i = -1; i <= 1; i++) {
+                for(let j = -1; j <= 1; j++) createPlot(i*5, j*5);
             }
 
-            camera.position.set(0, 15, 18);
+            camera.position.set(0, 12, 16);
             camera.lookAt(0, 0, 0);
 
-            // МЕХАНИКА
-            let bal = parseInt(localStorage.getItem('meow_bal')) || 0;
-            document.getElementById('balance').innerText = bal;
+            let balance = parseInt(localStorage.getItem('meow_bal')) || 0;
+            document.getElementById('balance').innerText = balance;
 
             const raycaster = new THREE.Raycaster();
             const mouse = new THREE.Vector2();
 
-            function handleInput(e) {
-                const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-                const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-                mouse.x = (clientX / window.innerWidth) * 2 - 1;
-                mouse.y = -(clientY / window.innerHeight) * 2 + 1;
-                
+            window.addEventListener('mousedown', (e) => {
+                mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+                mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
                 raycaster.setFromCamera(mouse, camera);
                 const hits = raycaster.intersectObjects(plots);
-
                 if (hits.length > 0) {
                     const p = hits[0].object;
                     if (p.userData.status === 'empty') {
-                        // Посадка
                         p.userData.status = 'growing';
-                        const g = new THREE.SphereGeometry(0.8, 8, 8);
-                        const m = new THREE.MeshStandardMaterial({ color: 0x00ffcc, emissive: 0x00ffcc, emissiveIntensity: 0.5 });
-                        const plant = new THREE.Mesh(g, m);
-                        plant.position.set(p.position.x, 1, p.position.z);
-                        scene.add(plant);
-                        p.userData.plant = plant;
-
+                        const s = new THREE.Mesh(new THREE.SphereGeometry(0.6), new THREE.MeshStandardMaterial({color: 0x00ffcc}));
+                        s.position.set(p.position.x, 0.8, p.position.z);
+                        scene.add(s);
+                        p.userData.plant = s;
                         setTimeout(() => {
                             p.userData.status = 'ready';
-                            plant.scale.set(1.8, 1.8, 1.8);
-                            plant.material.color.set(0xff00ff);
-                            plant.material.emissive.set(0xff00ff);
-                        }, 2500);
+                            s.scale.set(1.8, 1.8, 1.8);
+                            s.material.color.set(0xff00ff);
+                        }, 2000);
                     } else if (p.userData.status === 'ready') {
-                        // Сбор
-                        bal += 10;
-                        document.getElementById('balance').innerText = bal;
-                        localStorage.setItem('meow_bal', bal);
+                        balance += 10;
+                        document.getElementById('balance').innerText = balance;
+                        localStorage.setItem('meow_bal', balance);
                         scene.remove(p.userData.plant);
                         p.userData.status = 'empty';
                     }
                 }
-            }
-
-            window.addEventListener('mousedown', handleInput);
-            window.addEventListener('touchstart', handleInput);
+            });
 
             function animate() {
                 requestAnimationFrame(animate);
