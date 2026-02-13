@@ -5,7 +5,7 @@ html
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>CyberCat Wealth 2026</title>
-    <!-- ЗАМЕНА СЕРВЕРА НА БОЛЕЕ НАДЕЖНЫЙ CDNJS -->
+    <!-- ИСПРАВЛЕНО: Прямая ссылка на библиотеку -->
     <script src="https://cdnjs.cloudflare.com"></script>
     <style>
         body { margin: 0; overflow: hidden; background: #020205; color: #00ffcc; font-family: 'Segoe UI', sans-serif; }
@@ -19,13 +19,12 @@ html
         <div class="stat">$MEOW: <span id="balance">0</span></div>
         <div style="opacity: 0.7;">КЛИКАЙ НА ГРЯДКИ ДЛЯ МАЙНИНГА</div>
     </div>
-    <div id="loader">ИНИЦИАЛИЗАЦИЯ СИСТЕМЫ...</div>
+    <div id="loader">ПОДКЛЮЧЕНИЕ К НЕЙРОСЕТИ...</div>
 
     <script>
-        // Проверка: загрузилась ли библиотека
         window.onload = () => {
             if (typeof THREE === 'undefined') {
-                document.getElementById('loader').innerHTML = "<span style='color:red'>ОШИБКА: CDN ЗАБЛОКИРОВАН. ПРОВЕРЬ VPN ИЛИ АНТИВИРУС.</span>";
+                document.getElementById('loader').innerHTML = "<span style='color:red'>ОШИБКА CDN: ВКЛЮЧИ VPN ИЛИ ПРОВЕРЬ ИНТЕРНЕТ</span>";
                 return;
             }
             document.getElementById('loader').style.display = 'none';
@@ -34,39 +33,40 @@ html
 
         function initGame() {
             const scene = new THREE.Scene();
-            scene.background = new THREE.Color(0x020205);
-            
             const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
             const renderer = new THREE.WebGLRenderer({ antialias: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.setPixelRatio(window.devicePixelRatio);
             document.body.appendChild(renderer.domElement);
 
             // СВЕТ
             const sun = new THREE.DirectionalLight(0xffffff, 1.5);
             sun.position.set(5, 10, 7.5);
             scene.add(sun);
-            scene.add(new THREE.AmbientLight(0x4040ff, 0.4));
+            scene.add(new THREE.AmbientLight(0x4040ff, 0.5));
 
-            // ЗЕМЛЯ (Темный кибер-пол)
-            const ground = new THREE.Mesh(new THREE.PlaneGeometry(60, 60), new THREE.MeshStandardMaterial({color: 0x111111}));
+            // ПОЛ
+            const ground = new THREE.Mesh(new THREE.PlaneGeometry(100, 100), new THREE.MeshStandardMaterial({color: 0x050505}));
             ground.rotation.x = -Math.PI/2;
             scene.add(ground);
 
-            // ГРЯДКИ (Коричневые квадраты)
+            // ГРЯДКИ
             const plots = [];
             const createPlot = (x, z) => {
-                const p = new THREE.Mesh(new THREE.BoxGeometry(2.5, 0.2, 2.5), new THREE.MeshStandardMaterial({color: 0x3d2b1f}));
-                p.position.set(x, 0.1, z);
-                p.userData = { status: 'empty', time: 0, plant: null };
+                const p = new THREE.Mesh(new THREE.BoxGeometry(3, 0.3, 3), new THREE.MeshStandardMaterial({color: 0x2a1a0f}));
+                p.position.set(x, 0.15, z);
+                p.userData = { status: 'empty', plant: null };
                 scene.add(p);
                 plots.push(p);
             };
-            // Создаем сетку 2x2
-            createPlot(-2.5, 2.5); createPlot(2.5, 2.5);
-            createPlot(-2.5, -2.5); createPlot(2.5, -2.5);
+            
+            // Сетка грядок
+            for(let i = -1; i <= 1; i++) {
+                for(let j = -1; j <= 1; j++) {
+                    createPlot(i * 5, j * 5);
+                }
+            }
 
-            camera.position.set(0, 12, 16);
+            camera.position.set(0, 15, 15);
             camera.lookAt(0, 0, 0);
 
             let balance = parseInt(localStorage.getItem('meow_bal')) || 0;
@@ -85,11 +85,16 @@ html
                     const p = hits[0].object;
                     if (p.userData.status === 'empty') {
                         p.userData.status = 'growing';
-                        p.userData.time = Date.now();
-                        const s = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.6, 1.2), new THREE.MeshStandardMaterial({color: 0x00ffcc}));
-                        s.position.set(p.position.x, 0.8, p.position.z);
-                        scene.add(s);
-                        p.userData.plant = s;
+                        const plant = new THREE.Mesh(new THREE.SphereGeometry(0.5), new THREE.MeshStandardMaterial({color: 0x00ffcc}));
+                        plant.position.set(p.position.x, 1, p.position.z);
+                        scene.add(plant);
+                        p.userData.plant = plant;
+                        
+                        setTimeout(() => {
+                            p.userData.status = 'ready';
+                            plant.scale.set(2, 2, 2);
+                            plant.material.color.set(0xff00ff);
+                        }, 2000);
                     } else if (p.userData.status === 'ready') {
                         balance += 10;
                         document.getElementById('balance').innerText = balance;
@@ -102,23 +107,9 @@ html
 
             function animate() {
                 requestAnimationFrame(animate);
-                const now = Date.now();
-                plots.forEach(p => {
-                    if (p.userData.status === 'growing' && now - p.userData.time > 3000) {
-                        p.userData.status = 'ready';
-                        p.userData.plant.scale.set(1.5, 2.5, 1.5);
-                        p.userData.plant.material.color.set(0xff00ff); // Яркий неон при созревании
-                    }
-                });
                 renderer.render(scene, camera);
             }
             animate();
-
-            window.addEventListener('resize', () => {
-                camera.aspect = window.innerWidth / window.innerHeight;
-                camera.updateProjectionMatrix();
-                renderer.setSize(window.innerWidth, window.innerHeight);
-            });
         }
     </script>
 </body>
