@@ -12,7 +12,7 @@ html
         body { margin: 0; overflow: hidden; background: #050510; font-family: sans-serif; }
         #ui { position: absolute; top: 20px; left: 20px; color: #00ffcc; pointer-events: none; z-index: 5; }
         .stat { font-size: 24px; font-weight: bold; text-shadow: 0 0 10px #00ffcc; }
-        #msg { position: absolute; bottom: 100px; width: 100%; text-align: center; color: white; font-size: 14px; opacity: 0.7; }
+        #msg { position: absolute; bottom: 50px; width: 100%; text-align: center; color: white; font-size: 14px; opacity: 0.7; }
     </style>
 </head>
 <body>
@@ -23,8 +23,12 @@ html
     <div id="msg">Нажми на грядку, чтобы посадить!</div>
 
     <script>
-        const tg = window.Telegram.WebApp;
-        tg.expand();
+        // БЕЗОПАСНАЯ ИНИЦИАЛИЗАЦИЯ TELEGRAM
+        const tg = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp : null;
+        if (tg) {
+            tg.expand();
+            tg.ready();
+        }
 
         const scene = new THREE.Scene();
         scene.fog = new THREE.FogExp2(0x050510, 0.04);
@@ -40,13 +44,6 @@ html
         scene.add(sun);
         scene.add(new THREE.AmbientLight(0x4040ff, 0.4));
 
-        // Звезды
-        const starGeo = new THREE.BufferGeometry();
-        const starPos = [];
-        for(let i=0; i<5000; i++) starPos.push((Math.random()-0.5)*400, Math.random()*200, (Math.random()-0.5)*400);
-        starGeo.setAttribute('position', new THREE.Float32BufferAttribute(starPos, 3));
-        scene.add(new THREE.Points(starGeo, new THREE.PointsMaterial({color: 0xffffff, size: 0.1})));
-
         const ground = new THREE.Mesh(new THREE.PlaneGeometry(100, 100), new THREE.MeshStandardMaterial({color: 0x111111}));
         ground.rotation.x = -Math.PI/2;
         ground.receiveShadow = true;
@@ -56,69 +53,61 @@ html
         let balance = parseInt(localStorage.getItem('meow_bal')) || 0;
         document.getElementById('balance').innerText = balance;
 
-        // ЗАГРУЗКА МОДЕЛЕЙ ИЗ ПАПКИ MODELS
-        loader.load('models/cat.glb', (gltf) => {
-            const cat = gltf.scene;
-            cat.traverse(n => { if(n.isMesh) n.castShadow = true; });
-            scene.add(cat);
-        });
+        // Загрузка моделей (теперь БЕЗОПАСНО)
+        const load = (path, x, z, s) => {
+            loader.load(path, (g) => {
+                const m = g.scene;
+                m.position.set(x, 0, z);
+                m.scale.set(s, s, s);
+                m.traverse(n => { if(n.isMesh) n.castShadow = true; });
+                scene.add(m);
+            }, undefined, (e) => console.log("Файл не найден:", path));
+        };
 
-        loader.load('models/tree.glb', (gltf) => {
-            const tree = gltf.scene;
-            tree.position.set(5, 0, -5);
-            tree.scale.set(2, 2, 2);
-            tree.traverse(n => { if(n.isMesh) n.castShadow = true; });
-            scene.add(tree);
-        });
+        load('models/cat.glb', 0, 0, 1.2);
+        load('models/tree.glb', 5, -5, 2.5);
 
-        // СИСТЕМА ОГОРОДА
+        // ОГОРОД
         const plots = [];
-        const plotGeo = new THREE.BoxGeometry(1.2, 0.1, 1.2);
-        const plotMat = new THREE.MeshStandardMaterial({color: 0x332211});
+        const createPlot = (x, z) => {
+            const p = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.2, 1.5), new THREE.MeshStandardMaterial({color: 0x3d2b1f}));
+            p.position.set(x, 0.1, z);
+            p.receiveShadow = true;
+            p.userData = { status: 'empty', time: 0, plant: null };
+            scene.add(p);
+            plots.push(p);
+        };
+        createPlot(-2, 2); createPlot(1, 2); createPlot(-2, -1); createPlot(1, -1);
 
-        function createPlot(x, z) {
-            const plot = new THREE.Mesh(plotGeo, plotMat);
-            plot.position.set(x, 0.05, z);
-            plot.receiveShadow = true;
-            plot.userData = { status: 'empty', time: 0, plant: null };
-            scene.add(plot);
-            plots.push(plot);
-        }
-
-        // Создаем 4 грядки
-        createPlot(-2, 2); createPlot(0, 2);
-        createPlot(-2, 0); createPlot(0, 0);
-
-        camera.position.set(0, 7, 10);
+        camera.position.set(0, 8, 10);
         camera.lookAt(0, 0, 0);
 
-        // КЛИК (СБОР И ПОСАДКА)
         const raycaster = new THREE.Raycaster();
         const mouse = new THREE.Vector2();
 
-        window.addEventListener('click', (e) => {
+        window.addEventListener('mousedown', (e) => {
             mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
             mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
             raycaster.setFromCamera(mouse, camera);
-            const intersects = raycaster.intersectObjects(plots);
+            const hits = raycaster.intersectObjects(plots);
 
-            if (intersects.length > 0) {
-                const p = intersects[0].object;
+            if (hits.length > 0) {
+                const p = hits[0].object;
                 if (p.userData.status === 'empty') {
                     p.userData.status = 'growing';
                     p.userData.time = Date.now();
-                    const s = new THREE.Mesh(new THREE.SphereGeometry(0.2), new THREE.MeshStandardMaterial({color: 0x00ff00}));
-                    s.position.set(p.position.x, 0.2, p.position.z);
+                    const s = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.3, 0.3), new THREE.MeshStandardMaterial({color: 0x00ff00}));
+                    s.position.set(p.position.x, 0.4, p.position.z);
                     scene.add(s);
                     p.userData.plant = s;
-                    tg.HapticFeedback.impactOccurred('light');
+                    if(tg) tg.HapticFeedback.impactOccurred('light');
                 } else if (p.userData.status === 'ready') {
                     balance += 10;
                     document.getElementById('balance').innerText = balance;
                     localStorage.setItem('meow_bal', balance);
                     scene.remove(p.userData.plant);
                     p.userData.status = 'empty';
-                    tg.HapticFeedback.notificationOccurred('success');
+                    if(tg) tg.HapticFeedback.notificationOccurred('success');
                 }
             }
         });
@@ -127,10 +116,10 @@ html
             requestAnimationFrame(animate);
             const now = Date.now();
             plots.forEach(p => {
-                if (p.userData.status === 'growing' && now - p.userData.time > 10000) { // 10 сек для теста
+                if (p.userData.status === 'growing' && now - p.userData.time > 5000) {
                     p.userData.status = 'ready';
-                    p.userData.plant.scale.set(2, 2, 2);
-                    p.userData.plant.material.color.set(0xffcc00); // Пожелтело = созрело
+                    p.userData.plant.scale.set(3, 5, 3);
+                    p.userData.plant.material.color.set(0xffcc00);
                 }
             });
             renderer.render(scene, camera);
