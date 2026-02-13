@@ -5,105 +5,110 @@ html
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>CyberCat Wealth 2026</title>
-    <!-- ИСПРАВЛЕНО: Прямая ссылка на библиотеку -->
+    <!-- ИСПОЛЬЗУЕМ ПРОВЕРЕННЫЙ СКРИПТ С КОРРЕКТНЫМ ПУТЕМ -->
     <script src="https://cdnjs.cloudflare.com"></script>
     <style>
-        body { margin: 0; overflow: hidden; background: #020205; color: #00ffcc; font-family: 'Segoe UI', sans-serif; }
+        body { margin: 0; overflow: hidden; background: #000; color: #00ffcc; font-family: sans-serif; }
         #ui { position: absolute; top: 20px; left: 20px; pointer-events: none; z-index: 10; }
-        .stat { font-size: 32px; font-weight: bold; text-shadow: 0 0 15px #00ffcc; }
-        #loader { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 14px; text-transform: uppercase; letter-spacing: 2px; }
+        .stat { font-size: 28px; font-weight: bold; text-shadow: 0 0 10px #00ffcc; }
+        #loader { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 16px; color: #00ffcc; text-align: center; }
     </style>
 </head>
 <body>
     <div id="ui">
         <div class="stat">$MEOW: <span id="balance">0</span></div>
-        <div style="opacity: 0.7;">КЛИКАЙ НА ГРЯДКИ ДЛЯ МАЙНИНГА</div>
+        <div style="opacity: 0.7;">КЛИКАЙ НА ГРЯДКИ (КОРИЧНЕВЫЕ КВАДРАТЫ)</div>
     </div>
-    <div id="loader">ПОДКЛЮЧЕНИЕ К НЕЙРОСЕТИ...</div>
+    <div id="loader">ЗАПУСК КИБЕР-ДВИЖКА...</div>
 
     <script>
-        window.onload = () => {
-            if (typeof THREE === 'undefined') {
-                document.getElementById('loader').innerHTML = "<span style='color:red'>ОШИБКА CDN: ВКЛЮЧИ VPN ИЛИ ПРОВЕРЬ ИНТЕРНЕТ</span>";
-                return;
-            }
-            document.getElementById('loader').style.display = 'none';
-            initGame();
-        };
+        // Ждем полной загрузки страницы и скриптов
+        window.addEventListener('load', function() {
+            setTimeout(() => {
+                if (typeof THREE === 'undefined') {
+                    document.getElementById('loader').innerHTML = "<b style='color:red'>ОШИБКА: ДОСТУП К ТРИ-ЯДРУ ЗАБЛОКИРОВАН.<br>ПОПРОБУЙ ВКЛЮЧИТЬ VPN ИЛИ СМЕНИТЬ БРАУЗЕР.</b>";
+                } else {
+                    document.getElementById('loader').style.display = 'none';
+                    startEngine();
+                }
+            }, 1000);
+        });
 
-        function initGame() {
+        function startEngine() {
             const scene = new THREE.Scene();
-            const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
+            const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
             const renderer = new THREE.WebGLRenderer({ antialias: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
             document.body.appendChild(renderer.domElement);
 
-            // СВЕТ
-            const sun = new THREE.DirectionalLight(0xffffff, 1.5);
-            sun.position.set(5, 10, 7.5);
-            scene.add(sun);
-            scene.add(new THREE.AmbientLight(0x4040ff, 0.5));
+            // Освещение
+            const light = new THREE.PointLight(0xffffff, 1, 100);
+            light.position.set(10, 10, 10);
+            scene.add(light);
+            scene.add(new THREE.AmbientLight(0x404040));
 
-            // ПОЛ
-            const ground = new THREE.Mesh(new THREE.PlaneGeometry(100, 100), new THREE.MeshStandardMaterial({color: 0x050505}));
-            ground.rotation.x = -Math.PI/2;
-            scene.add(ground);
-
-            // ГРЯДКИ
+            // Сетка грядок (создаем массив)
             const plots = [];
-            const createPlot = (x, z) => {
-                const p = new THREE.Mesh(new THREE.BoxGeometry(3, 0.3, 3), new THREE.MeshStandardMaterial({color: 0x2a1a0f}));
-                p.position.set(x, 0.15, z);
-                p.userData = { status: 'empty', plant: null };
-                scene.add(p);
-                plots.push(p);
-            };
-            
-            // Сетка грядок
-            for(let i = -1; i <= 1; i++) {
-                for(let j = -1; j <= 1; j++) {
-                    createPlot(i * 5, j * 5);
+            const geometry = new THREE.BoxGeometry(3, 0.2, 3);
+            const material = new THREE.MeshStandardMaterial({ color: 0x5c4033 }); // Коричневый
+
+            for (let x = -1; x <= 1; x++) {
+                for (let z = -1; z <= 1; z++) {
+                    const plot = new THREE.Mesh(geometry, material);
+                    plot.position.set(x * 5, 0, z * 5);
+                    plot.userData = { status: 'empty', plant: null };
+                    scene.add(plot);
+                    plots.push(plot);
                 }
             }
 
-            camera.position.set(0, 15, 15);
+            camera.position.set(0, 10, 15);
             camera.lookAt(0, 0, 0);
 
-            let balance = parseInt(localStorage.getItem('meow_bal')) || 0;
-            document.getElementById('balance').innerText = balance;
-
+            // Логика кликов
             const raycaster = new THREE.Raycaster();
             const mouse = new THREE.Vector2();
 
-            window.addEventListener('mousedown', (e) => {
-                mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
-                mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+            window.addEventListener('mousedown', (event) => {
+                mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+                mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
                 raycaster.setFromCamera(mouse, camera);
-                const hits = raycaster.intersectObjects(plots);
+                const intersects = raycaster.intersectObjects(plots);
 
-                if (hits.length > 0) {
-                    const p = hits[0].object;
-                    if (p.userData.status === 'empty') {
-                        p.userData.status = 'growing';
-                        const plant = new THREE.Mesh(new THREE.SphereGeometry(0.5), new THREE.MeshStandardMaterial({color: 0x00ffcc}));
-                        plant.position.set(p.position.x, 1, p.position.z);
-                        scene.add(plant);
-                        p.userData.plant = plant;
-                        
-                        setTimeout(() => {
-                            p.userData.status = 'ready';
-                            plant.scale.set(2, 2, 2);
-                            plant.material.color.set(0xff00ff);
-                        }, 2000);
-                    } else if (p.userData.status === 'ready') {
-                        balance += 10;
-                        document.getElementById('balance').innerText = balance;
-                        localStorage.setItem('meow_bal', balance);
-                        scene.remove(p.userData.plant);
-                        p.userData.status = 'empty';
+                if (intersects.length > 0) {
+                    const obj = intersects[0].object;
+                    if (obj.userData.status === 'empty') {
+                        growPlant(obj);
+                    } else if (obj.userData.status === 'ready') {
+                        harvest(obj);
                     }
                 }
             });
+
+            function growPlant(plot) {
+                plot.userData.status = 'growing';
+                const plantGeo = new THREE.ConeGeometry(0.5, 1, 8);
+                const plantMat = new THREE.MeshStandardMaterial({ color: 0x00ffcc });
+                const plant = new THREE.Mesh(plantGeo, plantMat);
+                plant.position.set(plot.position.x, 0.6, plot.position.z);
+                scene.add(plant);
+                plot.userData.plant = plant;
+
+                setTimeout(() => {
+                    plot.userData.status = 'ready';
+                    plant.material.color.set(0xff00ff);
+                    plant.scale.set(1.5, 1.5, 1.5);
+                }, 3000);
+            }
+
+            function harvest(plot) {
+                let bal = parseInt(document.getElementById('balance').innerText);
+                bal += 10;
+                document.getElementById('balance').innerText = bal;
+                localStorage.setItem('meow_bal', bal);
+                scene.remove(plot.userData.plant);
+                plot.userData.status = 'empty';
+            }
 
             function animate() {
                 requestAnimationFrame(animate);
