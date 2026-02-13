@@ -2,22 +2,29 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>CyberCat v52.0: Hard Fix</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>CyberCat v53.0: Real Farm</title>
+    <script src="three.min.js"></script>
     <style>
         body { margin: 0; overflow: hidden; background: #000; font-family: 'Segoe UI', sans-serif; }
         #ui { position: fixed; top: 20px; left: 20px; z-index: 100; pointer-events: none; }
-        .hud { background: rgba(0,0,0,0.9); border: 1px solid #ffcc00; padding: 15px; border-radius: 8px; color: #fff; width: 220px; }
+        .hud { background: rgba(0,0,0,0.85); border-left: 4px solid #ffcc00; padding: 15px; border-radius: 4px; color: #fff; backdrop-filter: blur(10px); width: 220px; }
+        .bar { height: 8px; background: #222; margin: 5px 0; border-radius: 4px; overflow: hidden; }
+        #energy-fill { width: 100%; height: 100%; background: #00ffcc; transition: 0.3s; }
         .btns { position: fixed; bottom: 30px; width: 100%; display: flex; justify-content: center; gap: 10px; pointer-events: auto; }
-        .btn { background: #111; color: #ffcc00; border: 1px solid #ffcc00; padding: 10px; cursor: pointer; font-size: 10px; font-weight: bold; }
-        #status { font-size: 10px; color: #ff00ff; margin-top: 5px; }
+        .btn { background: #1a1a1a; color: #ffcc00; border: 1px solid #ffcc00; padding: 10px 15px; cursor: pointer; font-size: 10px; font-weight: bold; text-transform: uppercase; }
+        #clock { font-size: 32px; font-weight: 900; color: #ffcc00; }
+        #status { font-size: 9px; color: #00ffcc; margin-top: 5px; }
     </style>
 </head>
 <body>
     <div id="ui">
         <div class="hud">
-            <div id="clock" style="font-size: 28px; font-weight: 900;">12:00</div>
-            <div style="color: #00ffcc;">$MEOW: <b id="bal">0</b></div>
-            <div id="status">ПРОВЕРКА ФАЙЛОВ...</div>
+            <div id="clock">12:00</div>
+            <div style="font-size: 12px; color: #ffcc00;">$MEOW: <b id="bal">0</b></div>
+            <div style="font-size: 10px; margin-top:10px; opacity:0.7;">ЭНЕРГИЯ КОТА:</div>
+            <div class="bar"><div id="energy-fill"></div></div>
+            <div id="status">RTX ACCELERATION: ACTIVE</div>
         </div>
     </div>
     <div class="btns">
@@ -28,63 +35,155 @@
     </div>
 
     <script>
-        let db = JSON.parse(localStorage.getItem('cyber_v52')) || { bal: 1000, builds: [], gardens: [], energy: 100, time: 1.5 };
-
-        async function loadEngine() {
-            const status = document.getElementById('status');
-            const sources = ['./three.min.js', 'https://unpkg.com'];
-            
-            for (let url of sources) {
-                try {
-                    status.innerText = "ЗАГРУЗКА: " + url;
-                    const resp = await fetch(url);
-                    if (!resp.ok) continue;
-                    const code = await resp.text();
-                    const script = document.createElement('script');
-                    script.textContent = code;
-                    document.head.appendChild(script);
-                    status.innerText = "ENGINE READY | RTX ACTIVE";
-                    initGame();
-                    return;
-                } catch (e) { console.log("Skip source: " + url); }
-            }
-            status.innerText = "КРИТИЧЕСКАЯ ОШИБКА: ДВИЖОК НЕ НАЙДЕН";
+        // Детектор движка
+        if (typeof THREE === 'undefined') {
+            document.body.innerHTML = "<h1 style='color:white; padding:50px;'>ОШИБКА: three.min.js не загружен. Нажми Ctrl+F5!</h1>";
         }
 
-        function initGame() {
-            const scene = new THREE.Scene();
-            const camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 0.1, 2000);
-            const renderer = new THREE.WebGLRenderer({ antialias: true });
-            renderer.setSize(window.innerWidth, window.innerHeight);
-            document.body.appendChild(renderer.domElement);
+        let db = JSON.parse(localStorage.getItem('cyber_v53')) || { 
+            bal: 1000, builds: [], gardens: [], energy: 100, time: 1.5, board: false 
+        };
 
-            scene.add(new THREE.AmbientLight(0xffffff, 0.5));
-            const sun = new THREE.DirectionalLight(0xffccaa, 1); sun.position.set(50, 100, 50); scene.add(sun);
-            scene.add(new THREE.GridHelper(1000, 40, 0x222222, 0x111111));
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 0.1, 3000);
+        const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMap.enabled = true;
+        document.body.appendChild(renderer.domElement);
 
-            const cat = new THREE.Mesh(new THREE.BoxGeometry(1.5, 1, 2), new THREE.MeshStandardMaterial({color: 0x333}));
-            cat.position.y = 0.5; scene.add(cat);
-            let target = new THREE.Vector3(0, 0, 0);
+        // НЕБО, СОЛНЦЕ, ЛУНА, ЗВЕЗДЫ
+        const sun = new THREE.DirectionalLight(0xffccaa, 1.2); sun.castShadow = true; scene.add(sun);
+        const moon = new THREE.DirectionalLight(0x4444ff, 0.5); moon.castShadow = true; scene.add(moon);
+        const ambient = new THREE.AmbientLight(0xffffff, 0.1); scene.add(ambient);
 
-            window.addEventListener('pointerdown', (e) => {
-                const m = new THREE.Vector2((e.clientX/window.innerWidth)*2-1, -(e.clientY/window.innerHeight)*2+1);
-                const ray = new THREE.Raycaster(); ray.setFromCamera(m, camera);
-                const hit = new THREE.Vector3();
-                if(ray.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0,1,0), 0), hit)) target.copy(hit);
+        const starGeo = new THREE.BufferGeometry();
+        const starCoords = [];
+        for(let i=0; i<3000; i++) starCoords.push((Math.random()-0.5)*2500, Math.random()*1200, (Math.random()-0.5)*2500);
+        starGeo.setAttribute('position', new THREE.Float32BufferAttribute(starCoords, 3));
+        const stars = new THREE.Points(starGeo, new THREE.PointsMaterial({color: 0xffffff, size: 1.2, transparent: true}));
+        scene.add(stars);
+
+        // ЗЕМЛЯ (Чернозем)
+        const ground = new THREE.Mesh(new THREE.PlaneGeometry(2000, 2000), new THREE.MeshStandardMaterial({ color: 0x1a2e10 }));
+        ground.rotation.x = -Math.PI/2; ground.receiveShadow = true; scene.add(ground);
+
+        // КОТ (Главный герой)
+        const cat = new THREE.Group();
+        const body = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.8, 2.2), new THREE.MeshStandardMaterial({color: 0x1a1a1a}));
+        body.position.y = 0.4; body.castShadow = true; cat.add(body);
+        const head = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.8, 0.8), new THREE.MeshStandardMaterial({color: 0x1a1a1a}));
+        head.position.set(0, 1, 0.8); cat.add(head);
+        const tail = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.2, 1.2), new THREE.MeshStandardMaterial({color: 0x000}));
+        tail.position.set(0, 0.5, -1.2); tail.rotation.x = 0.5; cat.add(tail);
+        scene.add(cat);
+        let target = new THREE.Vector3(0, 0, 0);
+
+        // NPC AI (Куры и Свиньи)
+        const npcs = [];
+        function spawnNPC(type) {
+            const n = new THREE.Mesh(
+                new THREE.BoxGeometry(type==='pig'?1.2:0.6, type==='pig'?1:0.6, type==='pig'?1.8:0.6),
+                new THREE.MeshStandardMaterial({ color: type==='pig'?0xffaaaa:0xffffff })
+            );
+            n.position.set((Math.random()-0.5)*500, 0.3, (Math.random()-0.5)*500);
+            n.userData = { type, wander: new THREE.Vector3(), nextMove: 0 };
+            scene.add(n); npcs.push(n);
+        }
+        for(let i=0; i<20; i++) spawnNPC(i % 5 === 0 ? 'pig' : 'chicken');
+
+        // СТРОИТЕЛЬСТВО
+        function createShed(pos) {
+            const s = new THREE.Group();
+            const wall = new THREE.Mesh(new THREE.BoxGeometry(15, 12, 15), new THREE.MeshStandardMaterial({color: 0x3d2b1f, side: 2}));
+            wall.position.y = 6; wall.castShadow = true; wall.receiveShadow = true; s.add(wall);
+            s.position.set(pos.x, 0, pos.z); scene.add(s);
+        }
+        db.builds.forEach(p => createShed(p));
+
+        window.buildShed = () => {
+            if(db.bal >= 900) {
+                db.bal -= 900; const p = {x: cat.position.x, z: cat.position.z};
+                db.builds.push(p); createShed(p); save();
+            }
+        };
+
+        // ОГОРОД С РОСТОМ
+        function createGarden(pos, level = 0) {
+            const g = new THREE.Group();
+            const soil = new THREE.Mesh(new THREE.BoxGeometry(6, 0.2, 6), new THREE.MeshStandardMaterial({color: 0x1a0f00}));
+            g.add(soil);
+            const plant = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.5, 0.1), new THREE.MeshStandardMaterial({color: 0x22ff22}));
+            plant.position.y = 0.5; g.add(plant);
+            g.position.set(pos.x, 0, pos.z);
+            g.userData = { level, lastGrow: Date.now() };
+            scene.add(g); return g;
+        }
+        let gardenMeshes = db.gardens.map(g => createGarden(g.pos, g.level));
+
+        window.plantGarden = () => {
+            if(db.bal >= 150) {
+                db.bal -= 150; const p = {x: cat.position.x + 8, z: cat.position.z};
+                db.gardens.push({pos: p, level: 0}); gardenMeshes.push(createGarden(p)); save();
+            }
+        };
+
+        window.sellAll = () => { db.bal += 100; save(); };
+
+        window.addEventListener('pointerdown', (e) => {
+            const ray = new THREE.Raycaster();
+            const m = new THREE.Vector2((e.clientX/window.innerWidth)*2-1, -(e.clientY/window.innerHeight)*2+1);
+            ray.setFromCamera(m, camera);
+            const hit = new THREE.Vector3();
+            if(ray.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0,1,0), 0), hit)) target.copy(hit);
+        });
+
+        function save() {
+            localStorage.setItem('cyber_v53', JSON.stringify(db));
+            document.getElementById('bal').innerText = Math.floor(db.bal);
+            document.getElementById('energy-fill').style.width = db.energy + "%";
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            // 1 час = 5 минут реала
+            db.time += 0.00004; 
+            let dayScale = (db.time % (Math.PI*2)) / (Math.PI*2);
+            document.getElementById('clock').innerText = Math.floor(dayScale * 24).toString().padStart(2, '0') + ":" + Math.floor((dayScale * 1440) % 60).toString().padStart(2, '0');
+
+            sun.position.set(Math.sin(db.time)*800, Math.cos(db.time)*800, 300);
+            moon.position.set(Math.sin(db.time + Math.PI)*800, Math.cos(db.time + Math.PI)*800, 300);
+            
+            const isDay = Math.cos(db.time) > 0;
+            scene.background = new THREE.Color().setHSL(0.6, 0.4, isDay ? 0.4 : 0.02);
+            stars.material.opacity = isDay ? 0 : 1;
+
+            // ЛОГИКА КОТА
+            if(cat.position.distanceTo(target) > 1) {
+                db.energy -= db.board ? 0.04 : 0.01;
+                if(db.energy < 0) { db.energy = 0; db.board = false; }
+            }
+            cat.position.lerp(target, (db.energy > 0 ? (db.board ? 0.25 : 0.1) : 0.03));
+            cat.lookAt(target.x, 0, target.z);
+
+            // ЛОГИКА NPC
+            npcs.forEach(n => {
+                if(isDay && Date.now() > n.userData.nextMove) {
+                    n.userData.wander.set((Math.random()-0.5)*400, 0.3, (Math.random()-0.5)*400);
+                    n.userData.nextMove = Date.now() + 5000;
+                }
+                if(isDay) n.position.lerp(n.userData.wander, 0.005);
+                if(n.position.distanceTo(cat.position) < 5) {
+                    n.position.x += (n.position.x - cat.position.x)*1.5;
+                    db.bal += 0.1;
+                }
             });
 
-            function animate() {
-                requestAnimationFrame(animate);
-                cat.position.lerp(target, 0.1);
-                cat.lookAt(target.x, 0, target.z);
-                camera.position.lerp(new THREE.Vector3(cat.position.x, 60, cat.position.z + 70), 0.05);
-                camera.lookAt(cat.position);
-                renderer.render(scene, camera);
-            }
-            animate();
+            camera.position.lerp(new THREE.Vector3(cat.position.x, 60, cat.position.z + 70), 0.05);
+            camera.lookAt(cat.position);
+            renderer.render(scene, camera);
+            save();
         }
-
-        loadEngine();
+        save(); animate();
     </script>
 </body>
 </html>
