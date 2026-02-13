@@ -4,57 +4,65 @@ html
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>CyberCat Wealth 2026</title>
-    <!-- ИСПОЛЬЗУЕМ ПРОВЕРЕННЫЙ СКРИПТ С КОРРЕКТНЫМ ПУТЕМ -->
-    <script src="https://cdnjs.cloudflare.com"></script>
+    <title>CyberCat Wealth 2026 (Offline Core)</title>
+    <!-- ЗАПАСНОЙ CDN + ПРОВЕРКА -->
+    <script src="https://unpkg.com"></script>
     <style>
-        body { margin: 0; overflow: hidden; background: #000; color: #00ffcc; font-family: sans-serif; }
-        #ui { position: absolute; top: 20px; left: 20px; pointer-events: none; z-index: 10; }
-        .stat { font-size: 28px; font-weight: bold; text-shadow: 0 0 10px #00ffcc; }
-        #loader { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 16px; color: #00ffcc; text-align: center; }
+        body { margin: 0; overflow: hidden; background: #05050a; color: #00ffcc; font-family: 'Courier New', monospace; }
+        #ui { position: absolute; top: 20px; left: 20px; z-index: 10; pointer-events: none; }
+        .stat { font-size: 32px; font-weight: bold; text-shadow: 0 0 20px #00ffcc; }
+        #msg { color: #ff00ff; font-size: 14px; margin-top: 5px; }
+        #loader { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; }
+        canvas { display: block; touch-action: none; }
     </style>
 </head>
 <body>
     <div id="ui">
         <div class="stat">$MEOW: <span id="balance">0</span></div>
-        <div style="opacity: 0.7;">КЛИКАЙ НА ГРЯДКИ (КОРИЧНЕВЫЕ КВАДРАТЫ)</div>
+        <div id="msg">КЛИКАЙ НА ГРЯДКИ (КОРИЧНЕВЫЕ БЛОКИ)</div>
     </div>
-    <div id="loader">ЗАПУСК КИБЕР-ДВИЖКА...</div>
+    <div id="loader">ЗАГРУЗКА АВТОНОМНОГО ЯДРА...</div>
 
     <script>
-        // Ждем полной загрузки страницы и скриптов
-        window.addEventListener('load', function() {
-            setTimeout(() => {
-                if (typeof THREE === 'undefined') {
-                    document.getElementById('loader').innerHTML = "<b style='color:red'>ОШИБКА: ДОСТУП К ТРИ-ЯДРУ ЗАБЛОКИРОВАН.<br>ПОПРОБУЙ ВКЛЮЧИТЬ VPN ИЛИ СМЕНИТЬ БРАУЗЕР.</b>";
-                } else {
-                    document.getElementById('loader').style.display = 'none';
-                    startEngine();
-                }
-            }, 1000);
-        });
+        window.onload = function() {
+            // Если CDN заблокирован, выводим инструкцию
+            if (typeof THREE === 'undefined') {
+                document.getElementById('loader').innerHTML = `
+                    <div style="color:#ff4444; padding: 20px; border: 2px solid #ff4444;">
+                        <h2 style="margin:0">КРИТИЧЕСКИЙ СБОЙ CDN</h2>
+                        <p>Твой браузер блокирует загрузку движка.</p>
+                        <p>1. Включи VPN (Нидерланды/США)<br>
+                           2. Или обнови страницу 3 раза<br>
+                           3. Проверь антивирус</p>
+                    </div>`;
+                return;
+            }
+            document.getElementById('loader').style.display = 'none';
+            initGame();
+        };
 
-        function startEngine() {
+        function initGame() {
             const scene = new THREE.Scene();
             const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
             const renderer = new THREE.WebGLRenderer({ antialias: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(window.devicePixelRatio);
             document.body.appendChild(renderer.domElement);
 
-            // Освещение
-            const light = new THREE.PointLight(0xffffff, 1, 100);
-            light.position.set(10, 10, 10);
+            // СВЕТ
+            const light = new THREE.DirectionalLight(0xffffff, 1.2);
+            light.position.set(5, 10, 7);
             scene.add(light);
-            scene.add(new THREE.AmbientLight(0x404040));
+            scene.add(new THREE.AmbientLight(0x4040ff, 0.6));
 
-            // Сетка грядок (создаем массив)
+            // СЕТКА ГРЯДОК
             const plots = [];
-            const geometry = new THREE.BoxGeometry(3, 0.2, 3);
-            const material = new THREE.MeshStandardMaterial({ color: 0x5c4033 }); // Коричневый
+            const plotGeo = new THREE.BoxGeometry(3.5, 0.4, 3.5);
+            const plotMat = new THREE.MeshStandardMaterial({ color: 0x3d2314 });
 
-            for (let x = -1; x <= 1; x++) {
-                for (let z = -1; z <= 1; z++) {
-                    const plot = new THREE.Mesh(geometry, material);
+            for(let x = -1; x <= 1; x++) {
+                for(let z = -1; z <= 1; z++) {
+                    const plot = new THREE.Mesh(plotGeo, plotMat);
                     plot.position.set(x * 5, 0, z * 5);
                     plot.userData = { status: 'empty', plant: null };
                     scene.add(plot);
@@ -62,53 +70,56 @@ html
                 }
             }
 
-            camera.position.set(0, 10, 15);
+            camera.position.set(0, 15, 18);
             camera.lookAt(0, 0, 0);
 
-            // Логика кликов
+            // МЕХАНИКА
+            let bal = parseInt(localStorage.getItem('meow_bal')) || 0;
+            document.getElementById('balance').innerText = bal;
+
             const raycaster = new THREE.Raycaster();
             const mouse = new THREE.Vector2();
 
-            window.addEventListener('mousedown', (event) => {
-                mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-                mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+            function handleInput(e) {
+                const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+                const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+                mouse.x = (clientX / window.innerWidth) * 2 - 1;
+                mouse.y = -(clientY / window.innerHeight) * 2 + 1;
+                
                 raycaster.setFromCamera(mouse, camera);
-                const intersects = raycaster.intersectObjects(plots);
+                const hits = raycaster.intersectObjects(plots);
 
-                if (intersects.length > 0) {
-                    const obj = intersects[0].object;
-                    if (obj.userData.status === 'empty') {
-                        growPlant(obj);
-                    } else if (obj.userData.status === 'ready') {
-                        harvest(obj);
+                if (hits.length > 0) {
+                    const p = hits[0].object;
+                    if (p.userData.status === 'empty') {
+                        // Посадка
+                        p.userData.status = 'growing';
+                        const g = new THREE.SphereGeometry(0.8, 8, 8);
+                        const m = new THREE.MeshStandardMaterial({ color: 0x00ffcc, emissive: 0x00ffcc, emissiveIntensity: 0.5 });
+                        const plant = new THREE.Mesh(g, m);
+                        plant.position.set(p.position.x, 1, p.position.z);
+                        scene.add(plant);
+                        p.userData.plant = plant;
+
+                        setTimeout(() => {
+                            p.userData.status = 'ready';
+                            plant.scale.set(1.8, 1.8, 1.8);
+                            plant.material.color.set(0xff00ff);
+                            plant.material.emissive.set(0xff00ff);
+                        }, 2500);
+                    } else if (p.userData.status === 'ready') {
+                        // Сбор
+                        bal += 10;
+                        document.getElementById('balance').innerText = bal;
+                        localStorage.setItem('meow_bal', bal);
+                        scene.remove(p.userData.plant);
+                        p.userData.status = 'empty';
                     }
                 }
-            });
-
-            function growPlant(plot) {
-                plot.userData.status = 'growing';
-                const plantGeo = new THREE.ConeGeometry(0.5, 1, 8);
-                const plantMat = new THREE.MeshStandardMaterial({ color: 0x00ffcc });
-                const plant = new THREE.Mesh(plantGeo, plantMat);
-                plant.position.set(plot.position.x, 0.6, plot.position.z);
-                scene.add(plant);
-                plot.userData.plant = plant;
-
-                setTimeout(() => {
-                    plot.userData.status = 'ready';
-                    plant.material.color.set(0xff00ff);
-                    plant.scale.set(1.5, 1.5, 1.5);
-                }, 3000);
             }
 
-            function harvest(plot) {
-                let bal = parseInt(document.getElementById('balance').innerText);
-                bal += 10;
-                document.getElementById('balance').innerText = bal;
-                localStorage.setItem('meow_bal', bal);
-                scene.remove(plot.userData.plant);
-                plot.userData.status = 'empty';
-            }
+            window.addEventListener('mousedown', handleInput);
+            window.addEventListener('touchstart', handleInput);
 
             function animate() {
                 requestAnimationFrame(animate);
