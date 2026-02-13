@@ -4,36 +4,41 @@ html
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>CyberCat v37.8: Eternal</title>
-    <script src="https://cdnjs.cloudflare.com"></script>
+    <title>CyberCat v37.9: Bypass</title>
+    <!-- ЗАПАСНОЙ CDN (UNPKG) - ОН ОБЫЧНО НЕ БЛОКИРУЕТСЯ -->
+    <script src="https://unpkg.com"></script>
     <style>
         body { margin: 0; overflow: hidden; background: #050200; font-family: 'Courier New', monospace; color: #fff; }
         #ui { position: fixed; top: 20px; left: 20px; z-index: 100; pointer-events: none; }
         .hud { background: rgba(0,0,0,0.9); border: 1px solid #00ffcc; padding: 15px; border-radius: 4px; }
         .btns { position: fixed; bottom: 30px; width: 100%; display: flex; justify-content: center; gap: 10px; pointer-events: auto; }
         .btn { background: #000; color: #00ffcc; border: 1px solid #00ffcc; padding: 12px; cursor: pointer; font-size: 11px; text-transform: uppercase; font-weight: bold; }
-        .btn:hover { background: #00ffcc; color: #000; box-shadow: 0 0 10px #00ffcc; }
-        #gpu-tag { position: fixed; bottom: 85px; width: 100%; text-align: center; color: #ff00ff; font-size: 9px; letter-spacing: 1px; }
+        .btn:hover { background: #00ffcc; color: #000; }
+        #gpu-tag { position: fixed; bottom: 85px; width: 100%; text-align: center; color: #ff00ff; font-size: 9px; }
     </style>
 </head>
 <body>
     <div id="ui">
         <div class="hud">
-            <div style="font-size: 18px; color: #00ffcc; margin-bottom:5px;">CORE_V37.8</div>
+            <div style="font-size: 18px; color: #00ffcc; margin-bottom:5px;">CORE_V37.9_FIX</div>
             <div style="color: #ffcc00;">$MEOW: <b id="bal">0</b></div>
             <div style="color: #ff00ff; font-size: 11px;">BUILDS: <span id="build-count">0</span></div>
-            <div style="font-size: 10px; color:#666; margin-top:5px;">ID: <span id="uid">...</span></div>
         </div>
     </div>
-    <div id="gpu-tag">RTX 5070 TI HARDWARE ACCELERATION: ACTIVE</div>
+    <div id="gpu-tag">RTX 5070 TI: WAITING FOR ENGINE...</div>
     <div class="btns">
         <button class="btn" onclick="toggleBoard()">🛹 BOOST</button>
-        <button class="btn" onclick="buildHouse()">🏗️ СРУБ (700)</button>
+        <button class="btn" onclick="buildHouse()">🏗️ BUILD (700)</button>
         <button class="btn" onclick="sellAll()">🏪 MARKET</button>
         <button class="btn" onclick="resetData()" style="border-color: red; color: red;">🗑️ RESET</button>
     </div>
 
     <script>
+        // Проверка загрузки библиотеки
+        if (typeof THREE === 'undefined') {
+            alert('Ошибка: Библиотека Three.js заблокирована. Попробуй включить VPN или сменить сеть.');
+        }
+
         let db = JSON.parse(localStorage.getItem('cybercat_v37_save')) || { 
             bal: 1000, inv: 0, board: false, builds: [], 
             uid: 'RTX-' + Math.random().toString(36).substr(2, 5).toUpperCase() 
@@ -96,7 +101,6 @@ html
             localStorage.setItem('cybercat_v37_save', JSON.stringify(db));
             document.getElementById('bal').innerText = Math.floor(db.bal);
             document.getElementById('build-count').innerText = db.builds.length;
-            document.getElementById('uid').innerText = db.uid;
         }
 
         function animate() {
