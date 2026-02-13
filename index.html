@@ -1,103 +1,148 @@
-
+html
 <!DOCTYPE html>
-<html>
+<html lang="ru">
 <head>
-    <title>CyberCat: Wealth 2026</title>
+    <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>CyberCat Wealth 2026</title>
     <script src="https://telegram.org"></script>
     <script src="https://cdnjs.cloudflare.com"></script>
     <script src="https://cdn.jsdelivr.net"></script>
     <style>
-        body { margin: 0; background: #050505; overflow: hidden; font-family: 'Courier New', monospace; }
-        #ui { position: absolute; top: 20px; width: 100%; text-align: center; color: #00ffcc; pointer-events: none; text-shadow: 0 0 10px #00ffcc; }
-        .btn-shop { position: absolute; bottom: 30px; right: 20px; padding: 15px; background: rgba(0,255,204,0.2); border: 1px solid #00ffcc; color: white; pointer-events: auto; }
+        body { margin: 0; overflow: hidden; background: #050510; font-family: 'Segoe UI', sans-serif; }
+        #ui { position: absolute; top: 20px; left: 20px; color: #00ffcc; pointer-events: none; z-index: 5; }
+        .stat { font-size: 24px; font-weight: bold; text-shadow: 0 0 10px #00ffcc; }
+        #loading-screen { position: fixed; top:0; left:0; width:100%; height:100%; background: #000; color: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 100; transition: 0.5s; }
     </style>
 </head>
 <body>
-    <div id="ui">
-        <h1>$MEOW: <span id="balance">0.00</span></h1>
-        <div id="status">НОЧЬ | ШТИЛЬ</div>
+    <div id="loading-screen">
+        <h1 id="load-text">ЗАГРУЗКА МИРА...</h1>
+        <div style="width: 200px; height: 5px; background: #222;"><div id="bar" style="width: 0%; height: 100%; background: #00ffcc;"></div></div>
     </div>
-    <button class="btn-shop" onclick="alert('Магазин откроется в @cybercat_global_2026')">LAVKA</button>
 
-<script>
-    const tg = window.Telegram.WebApp;
-    tg.expand();
+    <div id="ui">
+        <div class="stat">$MEOW: <span id="balance">0</span></div>
+        <div id="clock">ВРЕМЯ: 00:00</div>
+    </div>
 
-    // 1. МИР И ТУМАН
-    const scene = new THREE.Scene();
-    scene.fog = new THREE.FogExp2(0x050510, 0.04);
+    <script>
+        const tg = window.Telegram.WebApp;
+        tg.expand();
+        tg.ready();
 
-    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-    const renderer = new THREE.WebGLRenderer({ antialias: true });
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-    document.body.appendChild(renderer.domElement);
-
-    // 2. СОЛНЦЕ И ЛУНА (Смена циклов)
-    const sun = new THREE.DirectionalLight(0xffffff, 1);
-    sun.position.set(10, 20, 10);
-    sun.castShadow = true;
-    sun.shadow.mapSize.width = 1024;
-    scene.add(sun);
-    scene.add(new THREE.AmbientLight(0x404040, 0.5));
-
-    // 3. ЗВЕЗДНОЕ НЕБО (5000 точек)
-    const starGeo = new THREE.BufferGeometry();
-    const starPos = [];
-    for(let i=0; i<5000; i++) starPos.push((Math.random()-0.5)*500, Math.random()*200, (Math.random()-0.5)*500);
-    starGeo.setAttribute('position', new THREE.Float32BufferAttribute(starPos, 3));
-    const stars = new THREE.Points(starGeo, new THREE.PointsMaterial({color: 0xffffff, size: 0.2}));
-    scene.add(stars);
-
-    // 4. ГРУНТ (Трава)
-    const ground = new THREE.Mesh(new THREE.PlaneGeometry(100, 100), new THREE.MeshStandardMaterial({color: 0x101a10}));
-    ground.rotation.x = -Math.PI/2;
-    ground.receiveShadow = true;
-    scene.add(ground);
-
-    // 5. ЗАГРУЗКА ЖИЗНИ (Кот и Утки)
-    const loader = new THREE.GLTFLoader();
-    let cat;
-    const ducks = [];
-
-    // Заглушка, пока нет файлов:
-    const catBox = new THREE.Mesh(new THREE.BoxGeometry(1,1,1), new THREE.MeshStandardMaterial({color: 0x00ffcc}));
-    catBox.castShadow = true;
-    scene.add(catBox);
-    cat = catBox;
-
-    camera.position.set(0, 5, 10);
-    camera.lookAt(0, 0, 0);
-
-    // 6. ИГРОВОЙ ЦИКЛ
-    let balance = 0;
-    let time = 0;
-
-    function animate() {
-        requestAnimationFrame(animate);
-        time += 0.005;
-
-        // День/Ночь
-        sun.intensity = Math.max(0, Math.sin(time));
-        sun.position.x = Math.cos(time) * 20;
-        stars.material.opacity = sun.intensity > 0.2 ? 0 : 1;
+        // 1. ИНИЦИАЛИЗАЦИЯ ДВИЖКА
+        const scene = new THREE.Scene();
+        scene.fog = new THREE.FogExp2(0x050510, 0.04);
         
-        // Вращение кота (имитация жизни)
-        cat.rotation.y += 0.01;
-        
-        renderer.render(scene, camera);
-    }
-    
-    // Клик - майнинг
-    window.addEventListener('click', () => {
-        balance += 0.1;
-        document.getElementById('balance').innerText = balance.toFixed(2);
-        tg.HapticFeedback.impactOccurred('medium');
-    });
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        document.body.appendChild(renderer.domElement);
 
-    animate();
-</script>
+        // 2. СВЕТ И НЕБО
+        const sun = new THREE.DirectionalLight(0xffffff, 1.5);
+        sun.position.set(20, 40, 20);
+        sun.castShadow = true;
+        sun.shadow.mapSize.width = 2048;
+        scene.add(sun);
+        scene.add(new THREE.AmbientLight(0x4040ff, 0.3));
+
+        const starGeo = new THREE.BufferGeometry();
+        const starPos = [];
+        for(let i=0; i<6000; i++) starPos.push((Math.random()-0.5)*600, Math.random()*300, (Math.random()-0.5)*600);
+        starGeo.setAttribute('position', new THREE.Float32BufferAttribute(starPos, 3));
+        const stars = new THREE.Points(starGeo, new THREE.PointsMaterial({color: 0xffffff, size: 0.15, transparent: true}));
+        scene.add(stars);
+
+        // 3. ЗЕМЛЯ
+        const ground = new THREE.Mesh(new THREE.PlaneGeometry(200, 200), new THREE.MeshStandardMaterial({color: 0x111811}));
+        ground.rotation.x = -Math.PI/2;
+        ground.receiveShadow = true;
+        scene.add(ground);
+
+        // 4. ЛОГИКА И ЗАГРУЗКА
+        const loader = new THREE.GLTFLoader();
+        let balance = parseInt(localStorage.getItem('meow_balance')) || 0;
+        document.getElementById('balance').innerText = balance;
+
+        const animals = []; // ИИ птиц
+        let mixerCat; // Анимация кота
+
+        function loadAsset(name, path, pos, scale, isNPC = false) {
+            loader.load(path, (gltf) => {
+                const model = gltf.scene;
+                model.position.set(pos.x, 0, pos.z);
+                model.scale.set(scale, scale, scale);
+                model.traverse(n => { if(n.isMesh) { n.castShadow = true; n.receiveShadow = true; } });
+                scene.add(model);
+                
+                if(isNPC) {
+                    animals.push({ 
+                        mesh: model, 
+                        target: new THREE.Vector3(pos.x, 0, pos.z),
+                        timer: Math.random() * 100
+                    });
+                }
+                
+                if(name === 'cat') {
+                    if(gltf.animations.length) {
+                        mixerCat = new THREE.AnimationMixer(model);
+                        mixerCat.clipAction(gltf.animations[0]).play();
+                    }
+                    document.getElementById('loading-screen').style.opacity = '0';
+                    setTimeout(() => document.getElementById('loading-screen').style.display = 'none', 500);
+                }
+            });
+        }
+
+        // ЗАПУСК ЗАГРУЗКИ (пути к твоим файлам на GitHub)
+        loadAsset('cat', 'models/cat.glb', {x:0, z:0}, 1);
+        loadAsset('tree', 'models/tree.glb', {x:8, z:-8}, 2.5);
+        for(let i=0; i<8; i++) {
+            loadAsset('duck', 'models/duck.glb', {x:Math.random()*20-10, z:Math.random()*20-10}, 0.6, true);
+        }
+
+        camera.position.set(0, 8, 12);
+        camera.lookAt(0, 0, 0);
+
+        // 5. ИГРОВОЙ ЦИКЛ
+        const clock = new THREE.Clock();
+        function animate() {
+            requestAnimationFrame(animate);
+            const delta = clock.getDelta();
+            const time = Date.now() * 0.0005;
+
+            // День/Ночь
+            sun.position.x = Math.sin(time) * 50;
+            sun.intensity = Math.max(0.1, Math.sin(time) * 1.8);
+            stars.material.opacity = sun.intensity < 0.5 ? 1 : 0;
+
+            // ИИ птиц
+            animals.forEach(a => {
+                a.timer--;
+                if(a.timer <= 0) {
+                    a.target.set(Math.random()*30-15, 0, Math.random()*30-15);
+                    a.timer = 200 + Math.random() * 300;
+                }
+                a.mesh.position.lerp(a.target, 0.01);
+                a.mesh.lookAt(a.target);
+            });
+
+            if(mixerCat) mixerCat.update(delta);
+            renderer.render(scene, camera);
+        }
+
+        window.addEventListener('click', () => {
+            balance++;
+            document.getElementById('balance').innerText = balance;
+            localStorage.setItem('meow_balance', balance);
+            tg.HapticFeedback.impactOccurred('light');
+        });
+
+        animate();
+    </script>
 </body>
 </html>
