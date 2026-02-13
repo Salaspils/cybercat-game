@@ -4,122 +4,129 @@ html
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>CyberCat v37.9: Bypass</title>
-    <!-- ЗАПАСНОЙ CDN (UNPKG) - ОН ОБЫЧНО НЕ БЛОКИРУЕТСЯ -->
-    <script src="https://unpkg.com"></script>
+    <title>CyberCat v38.2: RTX Master</title>
     <style>
-        body { margin: 0; overflow: hidden; background: #050200; font-family: 'Courier New', monospace; color: #fff; }
+        body { margin: 0; overflow: hidden; background: #000; font-family: 'Segoe UI', sans-serif; color: #fff; }
         #ui { position: fixed; top: 20px; left: 20px; z-index: 100; pointer-events: none; }
-        .hud { background: rgba(0,0,0,0.9); border: 1px solid #00ffcc; padding: 15px; border-radius: 4px; }
-        .btns { position: fixed; bottom: 30px; width: 100%; display: flex; justify-content: center; gap: 10px; pointer-events: auto; }
-        .btn { background: #000; color: #00ffcc; border: 1px solid #00ffcc; padding: 12px; cursor: pointer; font-size: 11px; text-transform: uppercase; font-weight: bold; }
-        .btn:hover { background: #00ffcc; color: #000; }
-        #gpu-tag { position: fixed; bottom: 85px; width: 100%; text-align: center; color: #ff00ff; font-size: 9px; }
+        .hud { background: rgba(0,0,0,0.9); border: 2px solid #00ffcc; padding: 15px; border-radius: 8px; box-shadow: 0 0 20px #00ffcc44; }
+        .btns { position: fixed; bottom: 30px; width: 100%; display: flex; justify-content: center; gap: 15px; pointer-events: auto; }
+        .btn { background: #111; color: #00ffcc; border: 1px solid #00ffcc; padding: 12px 25px; cursor: pointer; font-weight: bold; border-radius: 5px; text-transform: uppercase; transition: 0.3s; }
+        .btn:hover { background: #00ffcc; color: #000; box-shadow: 0 0 15px #00ffcc; }
+        #gpu-tag { position: fixed; bottom: 85px; width: 100%; text-align: center; color: #ff00ff; font-size: 10px; letter-spacing: 2px; font-weight: bold; }
     </style>
 </head>
 <body>
     <div id="ui">
         <div class="hud">
-            <div style="font-size: 18px; color: #00ffcc; margin-bottom:5px;">CORE_V37.9_FIX</div>
-            <div style="color: #ffcc00;">$MEOW: <b id="bal">0</b></div>
-            <div style="color: #ff00ff; font-size: 11px;">BUILDS: <span id="build-count">0</span></div>
+            <div style="font-size: 22px; color: #00ffcc; margin-bottom: 5px;">CYBER_CAT OS</div>
+            <div style="color: #ffcc00; font-size: 18px;">$MEOW: <b id="bal">0</b></div>
+            <div style="color: #ff00ff; font-size: 12px; margin-top: 5px;">BUILDS: <span id="b-count">0</span></div>
         </div>
     </div>
-    <div id="gpu-tag">RTX 5070 TI: WAITING FOR ENGINE...</div>
+    <div id="gpu-tag">RTX 5070 TI UNLEASHED | DX11 HIGH-SPEC MODE</div>
     <div class="btns">
-        <button class="btn" onclick="toggleBoard()">🛹 BOOST</button>
+        <button class="btn" onclick="db.board = !db.board">🛹 BOOST</button>
         <button class="btn" onclick="buildHouse()">🏗️ BUILD (700)</button>
         <button class="btn" onclick="sellAll()">🏪 MARKET</button>
-        <button class="btn" onclick="resetData()" style="border-color: red; color: red;">🗑️ RESET</button>
     </div>
 
     <script>
-        // Проверка загрузки библиотеки
-        if (typeof THREE === 'undefined') {
-            alert('Ошибка: Библиотека Three.js заблокирована. Попробуй включить VPN или сменить сеть.');
+        // Список проверенных CDN
+        const links = [
+            'https://unpkg.com',
+            'https://cdn.jsdelivr.net',
+            'https://cdnjs.cloudflare.com'
+        ];
+
+        function loadThree(idx) {
+            if (idx >= links.length) return alert("Engine failure!");
+            const s = document.createElement('script');
+            s.src = links[idx];
+            s.onload = () => initGame();
+            s.onerror = () => loadThree(idx + 1);
+            document.head.appendChild(s);
         }
 
-        let db = JSON.parse(localStorage.getItem('cybercat_v37_save')) || { 
-            bal: 1000, inv: 0, board: false, builds: [], 
-            uid: 'RTX-' + Math.random().toString(36).substr(2, 5).toUpperCase() 
-        };
+        let db = JSON.parse(localStorage.getItem('cyber_save_v38')) || { bal: 1000, inv: 0, board: false, builds: [] };
 
-        const scene = new THREE.Scene();
-        scene.fog = new THREE.FogExp2(0x050200, 0.008);
-        const camera = new THREE.PerspectiveCamera(65, window.innerWidth/window.innerHeight, 0.1, 1000);
-        const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        document.body.appendChild(renderer.domElement);
+        function initGame() {
+            const scene = new THREE.Scene();
+            scene.fog = new THREE.FogExp2(0x000000, 0.007);
+            const camera = new THREE.PerspectiveCamera(65, window.innerWidth/window.innerHeight, 0.1, 1500);
+            const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            document.body.appendChild(renderer.domElement);
 
-        scene.add(new THREE.AmbientLight(0x4444ff, 0.6));
-        const sun = new THREE.PointLight(0xffaa44, 2, 600); sun.position.set(0, 50, 0); scene.add(sun);
-        scene.add(new THREE.GridHelper(1000, 50, 0x222222, 0x111111));
+            scene.add(new THREE.AmbientLight(0x4444ff, 0.5));
+            const sun = new THREE.DirectionalLight(0xffaa44, 1.2); sun.position.set(50, 100, 50); scene.add(sun);
+            scene.add(new THREE.GridHelper(1000, 50, 0x111111, 0x222222));
 
-        const player = new THREE.Mesh(new THREE.IcosahedronGeometry(1.5, 1), new THREE.MeshStandardMaterial({ color: 0x00ffcc, wireframe: true }));
-        player.position.y = 1.5; scene.add(player);
-        let target = new THREE.Vector3(0, 1.5, 0);
+            const player = new THREE.Mesh(new THREE.IcosahedronGeometry(1.5, 1), new THREE.MeshStandardMaterial({ color: 0x00ffcc, wireframe: true }));
+            player.position.y = 1.5; scene.add(player);
+            let target = new THREE.Vector3(0, 1.5, 0);
 
-        function createHouse(pos) {
-            const h = new THREE.Group();
-            for(let i=0; i<6; i++) {
-                const log = new THREE.Mesh(new THREE.BoxGeometry(12, 1.3, 1.3), new THREE.MeshStandardMaterial({ color: 0x4d3020 }));
-                log.position.y = i * 1.4; log.rotation.y = (i % 2) * Math.PI/2; h.add(log);
-            }
-            h.position.set(pos.x, 0.7, pos.z); scene.add(h);
-        }
-
-        db.builds.forEach(p => createHouse(p));
-
-        window.buildHouse = () => {
-            if(db.bal >= 700) {
-                db.bal -= 700;
-                const p = { x: player.position.x, z: player.position.z };
-                db.builds.push(p); createHouse(p); save();
-            }
-        };
-
-        const animals = [];
-        for(let i=0; i<30; i++) {
-            const a = new THREE.Mesh(new THREE.BoxGeometry(1.2, 1.2, 1.2), new THREE.MeshStandardMaterial({ color: 0xff00ff, emissive: 0x330033 }));
-            a.position.set((Math.random()-0.5)*500, 0.6, (Math.random()-0.5)*500);
-            a.userData.val = 60; scene.add(a); animals.push(a);
-        }
-
-        window.toggleBoard = () => { db.board = !db.board; player.scale.setScalar(db.board ? 1.5 : 1); };
-        window.sellAll = () => { db.bal += db.inv; db.inv = 0; save(); };
-        window.resetData = () => { localStorage.removeItem('cybercat_v37_save'); location.reload(); };
-
-        window.addEventListener('pointerdown', (e) => {
-            const ray = new THREE.Raycaster();
-            const mouse = new THREE.Vector2((e.clientX/window.innerWidth)*2-1, -(e.clientY/window.innerHeight)*2+1);
-            ray.setFromCamera(mouse, camera);
-            const hit = new THREE.Vector3();
-            if(ray.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0,1,0), 0), hit)) target.copy(hit).y = 1.5;
-        });
-
-        function save() {
-            localStorage.setItem('cybercat_v37_save', JSON.stringify(db));
-            document.getElementById('bal').innerText = Math.floor(db.bal);
-            document.getElementById('build-count').innerText = db.builds.length;
-        }
-
-        function animate() {
-            requestAnimationFrame(animate);
-            player.position.lerp(target, db.board ? 0.25 : 0.08);
-            player.rotation.y += 0.02;
-            animals.forEach(a => {
-                a.rotation.y += 0.05;
-                if(a.position.distanceTo(player.position) < 5) {
-                    db.inv += a.userData.val;
-                    a.position.set((Math.random()-0.5)*500, 0.6, (Math.random()-0.5)*500);
+            function createHouse(pos) {
+                const h = new THREE.Group();
+                for(let i=0; i<6; i++) {
+                    const log = new THREE.Mesh(new THREE.BoxGeometry(12, 1.3, 1.3), new THREE.MeshStandardMaterial({ color: 0x3d2b1f }));
+                    log.position.y = i * 1.4; log.rotation.y = (i % 2) * Math.PI/2; h.add(log);
                 }
+                h.position.set(pos.x, 0.7, pos.z); scene.add(h);
+            }
+
+            db.builds.forEach(p => createHouse(p));
+
+            window.buildHouse = () => {
+                if(db.bal >= 700) {
+                    db.bal -= 700;
+                    const p = { x: player.position.x, z: player.position.z };
+                    db.builds.push(p); createHouse(p); save();
+                }
+            };
+
+            const animals = [];
+            for(let i=0; i<25; i++) {
+                const a = new THREE.Mesh(new THREE.BoxGeometry(1,1,1), new THREE.MeshStandardMaterial({ color: 0xff00ff, emissive: 0x220022 }));
+                a.position.set((Math.random()-0.5)*600, 0.6, (Math.random()-0.5)*600);
+                a.userData.v = 75; scene.add(a); animals.push(a);
+            }
+
+            window.sellAll = () => { db.bal += db.inv; db.inv = 0; save(); };
+
+            window.addEventListener('pointerdown', (e) => {
+                const ray = new THREE.Raycaster();
+                const m = new THREE.Vector2((e.clientX/window.innerWidth)*2-1, -(e.clientY/window.innerHeight)*2+1);
+                ray.setFromCamera(m, camera);
+                const hit = new THREE.Vector3();
+                if(ray.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0,1,0), 0), hit)) target.copy(hit).y = 1.5;
             });
-            camera.position.lerp(new THREE.Vector3(player.position.x, 60, player.position.z + 70), 0.05);
-            camera.lookAt(player.position);
-            renderer.render(scene, camera);
-            save();
+
+            function save() {
+                localStorage.setItem('cyber_save_v38', JSON.stringify(db));
+                document.getElementById('bal').innerText = Math.floor(db.bal);
+                document.getElementById('b-count').innerText = db.builds.length;
+            }
+
+            function animate() {
+                requestAnimationFrame(animate);
+                player.position.lerp(target, db.board ? 0.25 : 0.1);
+                player.rotation.y += 0.05;
+                animals.forEach(a => {
+                    a.rotation.y += 0.03;
+                    if(a.position.distanceTo(player.position) < 5) {
+                        db.inv += a.userData.v;
+                        a.position.set((Math.random()-0.5)*600, 0.6, (Math.random()-0.5)*600);
+                    }
+                });
+                camera.position.lerp(new THREE.Vector3(player.position.x, 60, player.position.z + 70), 0.05);
+                camera.lookAt(player.position);
+                renderer.render(scene, camera);
+                save();
+            }
+            save(); animate();
         }
-        save(); animate();
+
+        loadThree(0);
     </script>
 </body>
 </html>
