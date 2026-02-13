@@ -2,141 +2,138 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>CyberCat v61.0: Real Farm Sim</title>
+    <title>CyberCat v69.0: RTX 5070 Ti Beast Mode</title>
     <script src="three.min.js"></script>
     <style>
-        body { margin: 0; overflow: hidden; background: #87ceeb; font-family: 'Segoe UI', sans-serif; }
+        body { margin: 0; overflow: hidden; background: #000; font-family: 'Segoe UI', sans-serif; }
         #ui { position: fixed; top: 20px; left: 20px; z-index: 100; pointer-events: none; }
-        .hud { background: rgba(0,0,0,0.5); border-radius: 8px; padding: 20px; color: #fff; backdrop-filter: blur(15px); border: 1px solid rgba(255,255,255,0.1); }
+        .hud { background: rgba(0,0,0,0.85); border: 2px solid #ffcc00; padding: 25px; border-radius: 4px; color: #fff; backdrop-filter: blur(20px); box-shadow: 0 0 50px rgba(255,204,0,0.2); }
         .btns { position: fixed; bottom: 30px; width: 100%; display: flex; justify-content: center; gap: 15px; pointer-events: auto; }
-        .btn { background: #3d4d2b; color: #fff; border: none; padding: 12px 30px; cursor: pointer; font-weight: bold; border-radius: 4px; text-transform: uppercase; transition: 0.3s; box-shadow: 0 4px 0 #2d3e1f; }
-        .btn:hover { background: #4d5d3b; transform: translateY(-2px); }
-        #clock { font-size: 28px; font-weight: 900; color: #ffcc00; }
+        .btn { background: #000; color: #ffcc00; border: 2px solid #ffcc00; padding: 15px 40px; cursor: pointer; font-weight: 900; text-transform: uppercase; letter-spacing: 3px; transition: 0.3s; }
+        .btn:hover { background: #ffcc00; color: #000; box-shadow: 0 0 40px #ffcc00; transform: scale(1.05); }
+        #clock { font-size: 38px; font-weight: 900; color: #ffcc00; }
+        #spec-tag { font-size: 9px; color: #00ffcc; margin-top: 10px; letter-spacing: 2px; }
     </style>
 </head>
 <body>
     <div id="ui">
         <div class="hud">
-            <div id="clock">10:00</div>
-            <div style="font-size: 14px; margin-bottom: 5px;">БАЛАНС: <b id="bal" style="color:#00ffcc;">1000</b></div>
-            <div style="font-size: 9px; opacity: 0.6; letter-spacing: 1px;">ENGINE: FARM_SIM_ULTRA_v61</div>
+            <div id="clock">12:00</div>
+            <div style="font-size: 16px; margin-top:5px; color:#ffcc00;">$MEOW: <b id="bal">1000</b></div>
+            <div id="spec-tag">SPEC: R7 5700G | RTX 5070 Ti | 32GB RAM</div>
         </div>
     </div>
     <div class="btns">
-        <button class="btn" onclick="db.board = !db.board">УСКОРЕНИЕ</button>
-        <button class="btn" onclick="buildHouse()">ПОСТРОИТЬ СРУБ</button>
-        <button class="btn" onclick="plantGarden()">ОГОРОД</button>
+        <button class="btn" onclick="db.board = !db.board">🛹 БУСТ</button>
+        <button class="btn" onclick="buildHouse()">🏗️ СРУБ (900)</button>
+        <button class="btn" onclick="location.reload()">🔄 REBOOT</button>
     </div>
 
     <script>
-        let db = JSON.parse(localStorage.getItem('cyber_v61')) || { bal: 1000, builds: [], gardens: [], time: 1.5, board: false };
-
-        const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0xaaccff);
-        scene.fog = new THREE.FogExp2(0xaaccff, 0.0015);
-
-        const camera = new THREE.PerspectiveCamera(50, window.innerWidth/window.innerHeight, 1, 5000);
-        const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.toneMapping = THREE.ACESFilmicToneMapping; // Кинематографичный вид
-        renderer.outputEncoding = THREE.sRGBEncoding;
-        renderer.shadowMap.enabled = true;
-        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-        document.body.appendChild(renderer.domElement);
-
-        // СВЕТ: РЕАЛИСТИЧНОЕ СОЛНЦЕ
-        const sun = new THREE.DirectionalLight(0xfff0dd, 1.8);
-        sun.position.set(300, 500, 100);
-        sun.castShadow = true;
-        sun.shadow.mapSize.set(4096, 4096);
-        scene.add(sun);
-        scene.add(new THREE.AmbientLight(0xccddee, 0.7));
-
-        // ЗЕМЛЯ И ГУСТАЯ ТРАВА (Instanced)
-        const ground = new THREE.Mesh(new THREE.PlaneGeometry(3000, 3000), new THREE.MeshStandardMaterial({ color: 0x2d3e1f, roughness: 1 }));
-        ground.rotation.x = -Math.PI/2; ground.receiveShadow = true; scene.add(ground);
-
-        const grassCount = 15000;
-        const grassGeo = new THREE.PlaneGeometry(0.5, 2.5);
-        const grassMat = new THREE.MeshStandardMaterial({ color: 0x4d5d3b, side: 2, alphaTest: 0.5 });
-        const instancedGrass = new THREE.InstancedMesh(grassGeo, grassMat, grassCount);
-        const dummy = new THREE.Object3D();
-        for(let i=0; i<grassCount; i++) {
-            dummy.position.set((Math.random()-0.5)*800, 1.25, (Math.random()-0.5)*800);
-            dummy.rotation.y = Math.random()*Math.PI;
-            dummy.updateMatrix();
-            instancedGrass.setMatrixAt(i, dummy.matrix);
-        }
-        scene.add(instancedGrass);
-
-        // ГЛАВНЫЙ ГЕРОЙ: КОТ (Улучшенный)
-        const cat = new THREE.Group();
-        const catMat = new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.8 });
-        const cBody = new THREE.Mesh(new THREE.CylinderGeometry(0.8, 1, 3, 16), catMat);
-        cBody.rotation.z = Math.PI/2; cBody.position.y = 1.2; cBody.castShadow = true; cat.add(cBody);
-        
-        const cHead = new THREE.Mesh(new THREE.SphereGeometry(0.9, 16, 16), catMat);
-        cHead.position.set(1.8, 2, 0); cat.add(cHead);
-        
-        const ears = new THREE.Mesh(new THREE.ConeGeometry(0.3, 0.6, 4), catMat);
-        ears.position.set(1.8, 2.8, 0.4); cat.add(ears.clone());
-        ears.position.z = -0.4; cat.add(ears);
-        
-        scene.add(cat);
-        let target = new THREE.Vector3(0, 0, 0);
-
-        // ПОСТРОЙКИ (FS-Style Logs)
-        function createShed(pos) {
-            const shed = new THREE.Group();
-            const logMat = new THREE.MeshStandardMaterial({ color: 0x3d2b1f, roughness: 0.9, metalness: 0.1 });
-            for(let i=0; i<9; i++) {
-                const log = new THREE.Mesh(new THREE.CylinderGeometry(0.6, 0.6, 16, 12), logMat);
-                log.rotation.z = Math.PI/2; log.position.y = i * 1.2; log.rotation.y = (i%2)*Math.PI/2;
-                log.castShadow = true; log.receiveShadow = true; shed.add(log);
-            }
-            shed.position.set(pos.x, 0.5, pos.z);
-            scene.add(shed);
-        }
-        db.builds.forEach(p => createShed(p));
-
-        window.buildHouse = () => {
-            if(db.bal >= 900) {
-                db.bal -= 900; const p = {x: cat.position.x, z: cat.position.z};
-                db.builds.push(p); createShed(p); save();
-            }
+        let db = JSON.parse(localStorage.getItem('cyber_v69')) || { 
+            bal: 1000, builds: [], time: 1.5, board: false, pos: {x:0, z:0} 
         };
 
-        window.addEventListener('pointerdown', (e) => {
-            const ray = new THREE.Raycaster();
-            const m = new THREE.Vector2((e.clientX/window.innerWidth)*2-1, -(e.clientY/window.innerHeight)*2+1);
-            ray.setFromCamera(m, camera);
-            const hit = new THREE.Vector3();
-            if(ray.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0,1,0), 0), hit)) target.copy(hit);
-        });
-
-        function save() {
-            localStorage.setItem('cyber_v61', JSON.stringify(db));
+        const save = () => {
+            localStorage.setItem('cyber_v69', JSON.stringify(db));
             document.getElementById('bal').innerText = Math.floor(db.bal);
+        };
+
+        function init() {
+            const scene = new THREE.Scene();
+            scene.background = new THREE.Color(0xaaccff);
+            scene.fog = new THREE.FogExp2(0xaaccff, 0.0012);
+
+            const camera = new THREE.PerspectiveCamera(45, window.innerWidth/window.innerHeight, 1, 8000);
+            const renderer = new THREE.WebGLRenderer({ 
+                antialias: true, 
+                powerPreference: "high-performance",
+                precision: "highp" // Максимальная точность вычислений для RTX
+            });
+            
+            renderer.setPixelRatio(window.devicePixelRatio);
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.toneMapping = THREE.ACESFilmicToneMapping;
+            renderer.toneMappingExposure = 1.4;
+            renderer.outputEncoding = THREE.sRGBEncoding;
+            
+            // ULTRA SHADOWS (8K Maps)
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            document.body.appendChild(renderer.domElement);
+
+            // КИНЕМАТОГРАФИЧНЫЙ СВЕТ
+            const sun = new THREE.DirectionalLight(0xfff5e6, 2.5);
+            sun.position.set(400, 600, 100);
+            sun.castShadow = true;
+            sun.shadow.mapSize.set(8192, 8192); // 8K тени специально под твой конфиг
+            scene.add(sun);
+            scene.add(new THREE.AmbientLight(0xccddee, 0.8));
+
+            const ground = new THREE.Mesh(
+                new THREE.PlaneGeometry(5000, 5000), 
+                new THREE.MeshStandardMaterial({ color: 0x1a2414, roughness: 0.8, metalness: 0.1 })
+            );
+            ground.rotation.x = -Math.PI/2; ground.receiveShadow = true; scene.add(ground);
+
+            const cat = new THREE.Group();
+            const catMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.3, metalness: 0.8 });
+            const body = new THREE.Mesh(new THREE.CylinderGeometry(1, 1.2, 3.5, 32), catMat);
+            body.rotation.z = Math.PI/2; body.position.y = 1.5; body.castShadow = true; cat.add(body);
+            const head = new THREE.Mesh(new THREE.SphereGeometry(1.2, 32, 32), catMat);
+            head.position.set(2, 2.2, 0); cat.add(head);
+            cat.position.set(db.pos.x, 0, db.pos.z);
+            scene.add(cat);
+            
+            let target = new THREE.Vector3(db.pos.x, 0, db.pos.z);
+
+            function createHouse(pos) {
+                const s = new THREE.Group();
+                const logMat = new THREE.MeshStandardMaterial({ color: 0x3d2b1f, roughness: 0.7, metalness: 0.1 });
+                for(let i=0; i<10; i++) {
+                    const log = new THREE.Mesh(new THREE.CylinderGeometry(0.75, 0.75, 18, 32), logMat);
+                    log.rotation.z = Math.PI/2; log.position.y = i * 1.4; log.rotation.y = (i%2)*Math.PI/2;
+                    log.castShadow = true; log.receiveShadow = true; s.add(log);
+                }
+                s.position.set(pos.x, 0.5, pos.z); scene.add(s);
+            }
+            db.builds.forEach(p => createHouse(p));
+
+            window.buildHouse = () => {
+                if(db.bal >= 900) {
+                    db.bal -= 900; const p = {x: cat.position.x, z: cat.position.z};
+                    db.builds.push(p); createHouse(p); save();
+                }
+            };
+
+            window.addEventListener('pointerdown', (e) => {
+                const m = new THREE.Vector2((e.clientX/window.innerWidth)*2-1, -(e.clientY/window.innerHeight)*2+1);
+                const ray = new THREE.Raycaster(); ray.setFromCamera(m, camera);
+                const hit = new THREE.Vector3();
+                if(ray.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0,1,0), 0), hit)) target.copy(hit);
+            });
+
+            function animate() {
+                requestAnimationFrame(animate);
+                db.time += 0.00004;
+                let dayScale = (db.time % (Math.PI*2)) / (Math.PI*2);
+                document.getElementById('clock').innerText = Math.floor(dayScale * 24).toString().padStart(2, '0') + ":" + Math.floor((dayScale * 1440) % 60).toString().padStart(2, '0');
+                
+                cat.position.lerp(target, db.board ? 0.3 : 0.08);
+                if(cat.position.distanceTo(target) > 1.5) cat.lookAt(target.x, 1.5, target.z);
+                
+                db.pos.x = cat.position.x; db.pos.z = cat.position.z;
+                
+                const camTarget = new THREE.Vector3(cat.position.x - 90, 60, cat.position.z + 100);
+                camera.position.lerp(camTarget, 0.04);
+                camera.lookAt(cat.position.x, 10, cat.position.z);
+                
+                renderer.render(scene, camera);
+                save();
+            }
+            animate();
         }
-
-        function animate() {
-            requestAnimationFrame(animate);
-            db.time += 0.00004;
-            let h = Math.floor(((db.time % (Math.PI*2)) / (Math.PI*2)) * 24);
-            document.getElementById('clock').innerText = h.toString().padStart(2, '0') + ":00";
-
-            cat.position.lerp(target, db.board ? 0.25 : 0.07);
-            if(cat.position.distanceTo(target) > 1.5) cat.lookAt(target.x, cat.position.y, target.z);
-
-            // Камера: Плавное следование (Simulator Style)
-            const camPos = new THREE.Vector3(cat.position.x - 80, 45, cat.position.z + 90);
-            camera.position.lerp(camPos, 0.04);
-            camera.lookAt(cat.position.x, 8, cat.position.z);
-
-            renderer.render(scene, camera);
-            save();
-        }
-        save(); animate();
+        if (typeof THREE !== 'undefined') init();
     </script>
 </body>
 </html>
