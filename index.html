@@ -4,74 +4,67 @@ html
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>CyberCat v33.0: NVIDIA Core</title>
+    <title>CyberCat v35.0: Force Mode</title>
     <link rel="icon" href="data:,">
-    <!-- ПРЯМАЯ ССЫЛКА НА БИБЛИОТЕКУ -->
+    <!-- ИСПОЛЬЗУЕМ СТАБИЛЬНУЮ ВЕРСИЮ 0.128 -->
     <script src="https://cdnjs.cloudflare.com"></script>
     <style>
-        body { margin: 0; overflow: hidden; background: #000; color: #00ffcc; font-family: 'Segoe UI', sans-serif; }
-        #ui { position: fixed; top: 20px; left: 20px; z-index: 100; pointer-events: none; }
-        .hud { background: rgba(0,0,0,0.85); border: 2px solid #00ffcc; padding: 20px; border-radius: 15px; box-shadow: 0 0 30px #00ffcc55; }
-        .btn { background: #000; border: 2px solid #00ffcc; color: #00ffcc; padding: 10px 20px; cursor: pointer; font-weight: bold; border-radius: 8px; pointer-events: auto; text-transform: uppercase; }
-        #loading { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; }
-    </style>
+        body { margin: 0; overflow: hidden; background: #000; color: #00ffcc; font-family: sans-serif; }
+        #hud { position: fixed; top: 20px; left: 20px; z-index: 100; pointer-events: none; }
+        .panel { background: rgba(0,0,0,0.85); border: 2px solid #00ffcc; padding: 15px; border-radius: 12px; box-shadow: 0 0 20px #00ffcc44; }
+        #status-bar { position: fixed; bottom: 20px; width: 100%; text-align: center; color: #ff00ff; font-size: 10px; font-weight: bold; }
+    </script>
 </head>
 <body>
-    <div id="ui">
-        <div class="hud">
-            <div style="font-size: 32px; font-weight: 900;">$MEOW: <span id="bal">0</span></div>
-            <div style="font-size: 10px; color:#ff00ff; margin-top:5px;">SYSTEM: <span id="engine-info">WAITING...</span></div>
-            <div style="margin-top:15px; display:flex; gap:10px;">
-                <button class="btn" onclick="saveToKey()">💾 КЛЮЧ</button>
-                <button class="btn" onclick="loadFromKey()">🔑 ВОЙТИ</button>
-            </div>
+    <div id="hud">
+        <div class="panel">
+            <div style="font-size: 28px; font-weight: 900;">$MEOW: <span id="bal">0</span></div>
+            <div style="font-size: 10px; margin-top:5px; color:#ff00ff">STATUS: <span id="engine">FORCE_BOOT...</span></div>
         </div>
     </div>
-    <div id="loading">ИНИЦИАЛИЗАЦИЯ NVIDIA ENGINE...</div>
+    <div id="status-bar">ENGINE: WebGL 1.0 (LEGACY FORCE) | GPU: NVIDIA RTX 5070 TI</div>
 
     <script>
-        let db = JSON.parse(localStorage.getItem('cybercat_v33')) || { bal: 1000, uid: 'BY-' + Math.random().toString(36).substr(2, 6).toUpperCase() };
-        function saveToKey() { prompt("ТВОЙ КЛЮЧ:", btoa(JSON.stringify(db))); }
-        function loadFromKey() { const k = prompt("ВСТАВЬ КЛЮЧ:"); if(k) { try { db = JSON.parse(atob(k)); localStorage.setItem('cybercat_v33', JSON.stringify(db)); location.reload(); } catch(e) { alert("Ошибка ключа!"); } } }
-
+        let db = JSON.parse(localStorage.getItem('cybercat_v35')) || { bal: 5000, uid: 'BY-' + Math.random().toString(36).substr(2, 6).toUpperCase() };
+        
         window.onload = () => {
             try {
-                if (typeof THREE === 'undefined') throw new Error('CDN_ERROR');
+                // ПРИНУДИТЕЛЬНОЕ ИСПОЛЬЗОВАНИЕ LEGACY-КОНТЕКСТА ДЛЯ ОБХОДА БЛОКИРОВОК
+                const canvas = document.createElement('canvas');
+                const context = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
                 
+                if (!context) throw new Error('WEBGL_DISABLED');
+
                 const scene = new THREE.Scene();
                 const camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 0.1, 1000);
+                const renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: false, powerPreference: "high-performance" });
                 
-                const renderer = new THREE.WebGLRenderer({ 
-                    antialias: true, 
-                    powerPreference: "high-performance" // ЗАПРОС К RTX 5070
-                });
                 renderer.setSize(window.innerWidth, window.innerHeight);
                 document.body.appendChild(renderer.domElement);
-                document.getElementById('loading').style.display = 'none';
-                document.getElementById('engine-info').innerText = 'NVIDIA_GPU_ACTIVE';
+                document.getElementById('engine').innerText = 'STABLE_CORE_ACTIVE';
 
-                // МИР (НЕОНОВАЯ СЕТКА)
+                // СЦЕНА (НЕОНОВЫЙ МАЙНИНГ)
                 scene.add(new THREE.GridHelper(500, 50, 0x00ffcc, 0x020205));
-                
-                // ОБЪЕКТ (ЦЕНТРАЛЬНЫЙ КРИСТАЛЛ)
-                const crystal = new THREE.Mesh(
-                    new THREE.IcosahedronGeometry(3, 0), 
-                    new THREE.MeshNormalMaterial({ wireframe: false }) // Цвета радуги
+                const core = new THREE.Mesh(
+                    new THREE.IcosahedronGeometry(3, 1), 
+                    new THREE.MeshBasicMaterial({ color: 0x00ffcc, wireframe: true })
                 );
-                crystal.position.y = 5; scene.add(crystal);
-                
-                camera.position.set(0, 20, 35); camera.lookAt(0, 5, 0);
+                core.position.y = 5;
+                scene.add(core);
+
+                camera.position.set(0, 20, 35);
+                camera.lookAt(0, 5, 0);
 
                 function animate() {
                     requestAnimationFrame(animate);
-                    crystal.rotation.y += 0.03;
-                    crystal.position.y = 5 + Math.sin(Date.now() * 0.005) * 1;
+                    core.rotation.y += 0.02;
+                    core.position.y = 5 + Math.sin(Date.now() * 0.005) * 1;
                     renderer.render(scene, camera);
                 }
                 animate();
 
             } catch (e) {
-                document.getElementById('loading').innerHTML = "<h2 style='color:red'>СБОЙ ИНИЦИАЛИЗАЦИИ</h2><p>Нажми Ctrl+F5 или проверь chrome://gpu</p>";
+                document.getElementById('hud').innerHTML = "<h2 style='color:yellow; background:black; padding:20px; border:2px solid red;'>ОШИБКА ДВИЖКА: КОНТЕКСТ ЗАБЛОКИРОВАН В НАСТРОЙКАХ CHROME</h2>";
             }
         };
         document.getElementById('bal').innerText = Math.floor(db.bal);
