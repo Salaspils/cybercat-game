@@ -2,26 +2,22 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>CyberCat v51.0: Real Farm</title>
+    <title>CyberCat v52.0: Hard Fix</title>
     <style>
         body { margin: 0; overflow: hidden; background: #000; font-family: 'Segoe UI', sans-serif; }
         #ui { position: fixed; top: 20px; left: 20px; z-index: 100; pointer-events: none; }
-        .hud { background: rgba(0,0,0,0.85); border: 2px solid #ffcc00; padding: 15px; border-radius: 8px; color: #fff; width: 220px; box-shadow: 0 0 20px rgba(255,204,0,0.2); }
-        .bar { height: 8px; background: #222; margin: 5px 0; border-radius: 4px; overflow: hidden; }
-        #energy-fill { width: 100%; height: 100%; background: #00ffcc; transition: 0.3s; }
+        .hud { background: rgba(0,0,0,0.9); border: 1px solid #ffcc00; padding: 15px; border-radius: 8px; color: #fff; width: 220px; }
         .btns { position: fixed; bottom: 30px; width: 100%; display: flex; justify-content: center; gap: 10px; pointer-events: auto; }
-        .btn { background: #1a1a1a; color: #ffcc00; border: 1px solid #ffcc00; padding: 10px 15px; cursor: pointer; font-size: 10px; font-weight: bold; text-transform: uppercase; }
-        #clock { font-size: 32px; font-weight: 900; color: #ffcc00; }
+        .btn { background: #111; color: #ffcc00; border: 1px solid #ffcc00; padding: 10px; cursor: pointer; font-size: 10px; font-weight: bold; }
+        #status { font-size: 10px; color: #ff00ff; margin-top: 5px; }
     </style>
 </head>
 <body>
     <div id="ui">
         <div class="hud">
-            <div id="clock">12:00</div>
-            <div style="font-size: 11px; color: #00ffcc;">$MEOW: <b id="bal">0</b></div>
-            <div style="font-size: 10px; margin-top:10px; opacity:0.7;">ЭНЕРГИЯ КОТА:</div>
-            <div class="bar"><div id="energy-fill"></div></div>
-            <div id="status" style="font-size: 9px; color: #ff00ff; margin-top:5px;">ENGINE: SEARCHING...</div>
+            <div id="clock" style="font-size: 28px; font-weight: 900;">12:00</div>
+            <div style="color: #00ffcc;">$MEOW: <b id="bal">0</b></div>
+            <div id="status">ПРОВЕРКА ФАЙЛОВ...</div>
         </div>
     </div>
     <div class="btns">
@@ -32,86 +28,43 @@
     </div>
 
     <script>
-        // БАЗА ДАННЫХ
-        let db = JSON.parse(localStorage.getItem('cyber_v51')) || { 
-            bal: 1000, builds: [], gardens: [], energy: 100, time: 1.5, board: false 
-        };
+        let db = JSON.parse(localStorage.getItem('cyber_v52')) || { bal: 1000, builds: [], gardens: [], energy: 100, time: 1.5 };
 
-        // ПРИНУДИТЕЛЬНЫЙ ЗАПУСК ДВИЖКА
-        async function boot() {
+        async function loadEngine() {
             const status = document.getElementById('status');
-            try {
-                const resp = await fetch('three.min.js');
-                if (!resp.ok) throw new Error('404: three.min.js не найден в GitHub!');
-                const code = await resp.text();
-                const script = document.createElement('script');
-                script.textContent = code;
-                document.head.appendChild(script);
-                status.innerText = "ENGINE: LOADED | RTX: ACTIVE";
-                initGame();
-            } catch (e) {
-                status.innerText = "ERROR: " + e.message;
-                status.style.color = "red";
+            const sources = ['./three.min.js', 'https://unpkg.com'];
+            
+            for (let url of sources) {
+                try {
+                    status.innerText = "ЗАГРУЗКА: " + url;
+                    const resp = await fetch(url);
+                    if (!resp.ok) continue;
+                    const code = await resp.text();
+                    const script = document.createElement('script');
+                    script.textContent = code;
+                    document.head.appendChild(script);
+                    status.innerText = "ENGINE READY | RTX ACTIVE";
+                    initGame();
+                    return;
+                } catch (e) { console.log("Skip source: " + url); }
             }
+            status.innerText = "КРИТИЧЕСКАЯ ОШИБКА: ДВИЖОК НЕ НАЙДЕН";
         }
 
         function initGame() {
             const scene = new THREE.Scene();
-            const camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 0.1, 3000);
-            const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+            const camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 0.1, 2000);
+            const renderer = new THREE.WebGLRenderer({ antialias: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.shadowMap.enabled = true;
             document.body.appendChild(renderer.domElement);
 
-            // СВЕТ: СОЛНЦЕ И ЛУНА
-            const sun = new THREE.DirectionalLight(0xffccaa, 1.2); sun.castShadow = true; scene.add(sun);
-            const moon = new THREE.DirectionalLight(0x4444ff, 0.5); moon.castShadow = true; scene.add(moon);
-            scene.add(new THREE.AmbientLight(0xffffff, 0.1));
+            scene.add(new THREE.AmbientLight(0xffffff, 0.5));
+            const sun = new THREE.DirectionalLight(0xffccaa, 1); sun.position.set(50, 100, 50); scene.add(sun);
+            scene.add(new THREE.GridHelper(1000, 40, 0x222222, 0x111111));
 
-            // ЗЕМЛЯ
-            const ground = new THREE.Mesh(new THREE.PlaneGeometry(2000, 2000), new THREE.MeshStandardMaterial({ color: 0x1a2e10 }));
-            ground.rotation.x = -Math.PI/2; ground.receiveShadow = true; scene.add(ground);
-
-            // МОДЕЛЬ КОТА (Voxel Style)
-            const cat = new THREE.Group();
-            const catBody = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.8, 2.2), new THREE.MeshStandardMaterial({color: 0x333}));
-            catBody.position.y = 0.4; catBody.castShadow = true; cat.add(catBody);
-            const head = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.8, 0.8), new THREE.MeshStandardMaterial({color: 0x333}));
-            head.position.set(0, 1, 0.8); cat.add(head);
-            scene.add(cat);
+            const cat = new THREE.Mesh(new THREE.BoxGeometry(1.5, 1, 2), new THREE.MeshStandardMaterial({color: 0x333}));
+            cat.position.y = 0.5; scene.add(cat);
             let target = new THREE.Vector3(0, 0, 0);
-
-            // САРАИ И КОРМУШКИ
-            function createShed(pos) {
-                const s = new THREE.Group();
-                const wall = new THREE.Mesh(new THREE.BoxGeometry(15, 12, 15), new THREE.MeshStandardMaterial({color: 0x3d2b1f, side: 2}));
-                wall.position.y = 6; s.add(wall);
-                const bowl = new THREE.Mesh(new THREE.CylinderGeometry(1, 1, 0.5), new THREE.MeshStandardMaterial({color: 0xeee}));
-                bowl.position.set(0, 0.3, 0); s.add(bowl);
-                s.position.set(pos.x, 0, pos.z); scene.add(s);
-            }
-            db.builds.forEach(p => createShed(p));
-
-            window.buildShed = () => {
-                if(db.bal >= 900) {
-                    db.bal -= 900; const p = {x: cat.position.x, z: cat.position.z};
-                    db.builds.push(p); createShed(p); save();
-                }
-            };
-
-            // ОГОРОД
-            function createGarden(pos) {
-                const g = new THREE.Mesh(new THREE.BoxGeometry(6, 0.2, 6), new THREE.MeshStandardMaterial({color: 0x1a0f00}));
-                g.position.set(pos.x, 0.1, pos.z); g.receiveShadow = true; scene.add(g);
-            }
-            db.gardens.forEach(g => createGarden(g));
-
-            window.plantGarden = () => {
-                if(db.bal >= 150) {
-                    db.bal -= 150; const p = {x: cat.position.x + 5, z: cat.position.z};
-                    db.gardens.push(p); createGarden(p); save();
-                }
-            };
 
             window.addEventListener('pointerdown', (e) => {
                 const m = new THREE.Vector2((e.clientX/window.innerWidth)*2-1, -(e.clientY/window.innerHeight)*2+1);
@@ -120,40 +73,18 @@
                 if(ray.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0,1,0), 0), hit)) target.copy(hit);
             });
 
-            function save() {
-                localStorage.setItem('cyber_v51', JSON.stringify(db));
-                document.getElementById('bal').innerText = Math.floor(db.bal);
-                document.getElementById('energy-fill').style.width = db.energy + "%";
-            }
-
             function animate() {
                 requestAnimationFrame(animate);
-                db.time += 0.00003; // Цикл 1ч = 5 мин
-                let dayScale = (db.time % (Math.PI*2)) / (Math.PI*2);
-                document.getElementById('clock').innerText = Math.floor(dayScale * 24).toString().padStart(2, '0') + ":" + Math.floor((dayScale * 1440) % 60).toString().padStart(2, '0');
-
-                sun.position.set(Math.sin(db.time)*800, Math.cos(db.time)*800, 300);
-                const isDay = Math.cos(db.time) > 0;
-                scene.background = new THREE.Color().setHSL(0.6, 0.4, isDay ? 0.4 : 0.02);
-
-                // ЭНЕРГИЯ И ДВИЖЕНИЕ
-                if(cat.position.distanceTo(target) > 1) {
-                    db.energy -= db.board ? 0.05 : 0.01;
-                    if(db.energy < 0) { db.energy = 0; db.board = false; }
-                }
-                
-                cat.position.lerp(target, (db.energy > 0 ? (db.board ? 0.25 : 0.08) : 0.02));
+                cat.position.lerp(target, 0.1);
                 cat.lookAt(target.x, 0, target.z);
-
-                camera.position.lerp(new THREE.Vector3(cat.position.x, 70, cat.position.z + 80), 0.05);
+                camera.position.lerp(new THREE.Vector3(cat.position.x, 60, cat.position.z + 70), 0.05);
                 camera.lookAt(cat.position);
                 renderer.render(scene, camera);
-                save();
             }
             animate();
         }
 
-        boot();
+        loadEngine();
     </script>
 </body>
 </html>
