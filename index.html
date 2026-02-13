@@ -4,111 +4,69 @@ html
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>CyberCat Wealth 2026</title>
-    <!-- ИСПОЛЬЗУЕМ МИРОВОЕ ЗЕРКАЛО, КОТОРОЕ РАБОТАЕТ ВЕЗДЕ -->
-    <script src="https://cdn.jsdelivr.net"></script>
+    <title>CyberCat Wealth 2026: Offline Core</title>
     <style>
-        body { margin: 0; overflow: hidden; background: #020205; color: #00ffcc; font-family: sans-serif; }
-        #ui { position: absolute; top: 20px; left: 20px; z-index: 10; pointer-events: none; }
+        body { margin: 0; overflow: hidden; background: #020205; color: #00ffcc; font-family: 'Segoe UI', sans-serif; perspective: 1000px; }
+        #ui { position: absolute; top: 20px; left: 20px; z-index: 100; pointer-events: none; }
         .stat { font-size: 32px; font-weight: bold; text-shadow: 0 0 15px #00ffcc; }
-        #loader { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #00ffcc; text-align: center; }
+        
+        /* 3D СЦЕНА БЕЗ ВНЕШНИХ БИБЛИОТЕК */
+        #scene { position: relative; width: 100vw; height: 100vh; transform-style: preserve-3d; transform: rotateX(60deg) rotateZ(45deg); display: flex; align-items: center; justify-content: center; }
+        .grid { display: grid; grid-template-columns: repeat(3, 100px); gap: 20px; transform-style: preserve-3d; }
+        
+        .plot { width: 100px; height: 100px; background: #3d2314; border: 2px solid #5c4033; cursor: pointer; transition: 0.3s; position: relative; transform-style: preserve-3d; }
+        .plot:hover { background: #4d2d1a; box-shadow: 0 0 20px #00ffcc; }
+        
+        /* РОСТОК (КИБЕР-СФЕРА) */
+        .plant { position: absolute; top: 25px; left: 25px; width: 50px; height: 50px; background: #00ffcc; transform: translateZ(30px) rotateX(-90deg); display: none; box-shadow: 0 0 15px #00ffcc; border-radius: 50%; }
+        .ready { background: #ff00ff !important; box-shadow: 0 0 20px #ff00ff !important; }
     </style>
 </head>
 <body>
     <div id="ui">
         <div class="stat">$MEOW: <span id="balance">0</span></div>
-        <div style="opacity: 0.7;">КЛИКАЙ НА ГРЯДКИ ДЛЯ МАЙНИНГА</div>
+        <div style="opacity: 0.7;">3D-ЯДРО АКТИВИРОВАНО (БЕЗ БЛОКИРОВОК)</div>
     </div>
-    <div id="loader">ЗАГРУЗКА ЯДРА...</div>
+
+    <div id="scene">
+        <div class="grid" id="grid"></div>
+    </div>
 
     <script>
-        window.onload = function() {
-            if (typeof THREE === 'undefined') {
-                // ПЕРЕХОД НА 2D ЕСЛИ CDN ВСЕ ЕЩЕ ЗАБЛОКИРОВАН
-                document.getElementById('loader').innerHTML = `
-                    <div style="border:2px solid #00ffcc; padding:20px; background:#050505;">
-                        <h2 style="color:yellow">РЕЖИМ СЛАБОГО ИНТЕРНЕТА</h2>
-                        <button onclick="mineMeow()" style="background:#00ffcc; padding:15px; border:none; font-weight:bold; cursor:pointer;">МАЙНИТЬ $MEOW (+10)</button>
-                    </div>`;
-                return;
-            }
-            document.getElementById('loader').style.display = 'none';
-            init3D();
-        };
+        const grid = document.getElementById('grid');
+        let balance = parseInt(localStorage.getItem('meow_bal')) || 0;
+        document.getElementById('balance').innerText = balance;
 
-        function init3D() {
-            const scene = new THREE.Scene();
-            const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
-            const renderer = new THREE.WebGLRenderer({ antialias: true });
-            renderer.setSize(window.innerWidth, window.innerHeight);
-            document.body.appendChild(renderer.domElement);
-
-            scene.add(new THREE.AmbientLight(0x4040ff, 0.5));
-            const sun = new THREE.DirectionalLight(0xffffff, 1);
-            sun.position.set(5, 10, 7);
-            scene.add(sun);
-
-            const plots = [];
-            for(let x = -1; x <= 1; x++) {
-                for(let z = -1; z <= 1; z++) {
-                    const p = new THREE.Mesh(new THREE.BoxGeometry(3, 0.4, 3), new THREE.MeshStandardMaterial({color: 0x3d2314}));
-                    p.position.set(x * 5, 0, z * 5);
-                    p.userData = { status: 'empty', plant: null };
-                    scene.add(p);
-                    plots.push(p);
-                }
-            }
-
-            camera.position.set(0, 12, 16);
-            camera.lookAt(0, 0, 0);
-
-            let bal = parseInt(localStorage.getItem('meow_bal')) || 0;
-            document.getElementById('balance').innerText = bal;
-
-            const raycaster = new THREE.Raycaster();
-            const mouse = new THREE.Vector2();
-
-            window.addEventListener('mousedown', (e) => {
-                mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
-                mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
-                raycaster.setFromCamera(mouse, camera);
-                const hits = raycaster.intersectObjects(plots);
-                if (hits.length > 0) {
-                    const p = hits[0].object;
-                    if (p.userData.status === 'empty') {
-                        p.userData.status = 'growing';
-                        const plant = new THREE.Mesh(new THREE.SphereGeometry(0.7), new THREE.MeshStandardMaterial({color: 0x00ffcc}));
-                        plant.position.set(p.position.x, 1, p.position.z);
-                        scene.add(plant);
-                        p.userData.plant = plant;
-                        setTimeout(() => {
-                            p.userData.status = 'ready';
-                            plant.material.color.set(0xff00ff);
-                            plant.scale.set(1.5, 1.5, 1.5);
-                        }, 2000);
-                    } else if (p.userData.status === 'ready') {
-                        updateBalance(10);
-                        scene.remove(p.userData.plant);
-                        p.userData.status = 'empty';
-                    }
-                }
-            });
-
-            function animate() {
-                requestAnimationFrame(animate);
-                renderer.render(scene, camera);
-            }
-            animate();
+        // Создаем 9 грядок
+        for (let i = 0; i < 9; i++) {
+            const plot = document.createElement('div');
+            plot.className = 'plot';
+            plot.innerHTML = '<div class="plant"></div>';
+            plot.onclick = () => handlePlotClick(plot);
+            grid.appendChild(plot);
         }
 
-        function mineMeow() {
-            updateBalance(10);
-        }
+        function handlePlotClick(plot) {
+            const plant = plot.querySelector('.plant');
+            const status = plot.dataset.status || 'empty';
 
-        function updateBalance(amount) {
-            let bal = parseInt(document.getElementById('balance').innerText) + amount;
-            document.getElementById('balance').innerText = bal;
-            localStorage.setItem('meow_bal', bal);
+            if (status === 'empty') {
+                plot.dataset.status = 'growing';
+                plant.style.display = 'block';
+                plant.className = 'plant';
+                
+                setTimeout(() => {
+                    plot.dataset.status = 'ready';
+                    plant.classList.add('ready');
+                }, 2000);
+            } else if (status === 'ready') {
+                balance += 10;
+                document.getElementById('balance').innerText = balance;
+                localStorage.setItem('meow_bal', balance);
+                
+                plant.style.display = 'none';
+                plot.dataset.status = 'empty';
+            }
         }
     </script>
 </body>
