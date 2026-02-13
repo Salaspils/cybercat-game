@@ -1,153 +1,103 @@
 
 <!DOCTYPE html>
-<html lang="ru">
+<html>
 <head>
-    <meta charset="UTF-8">
+    <title>CyberCat: Wealth 2026</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>CyberCat v80.11 - FINAL SAVE</title>
-    <!-- ИСПРАВЛЕНО: Прямая ссылка на движок Three.js -->
+    <script src="https://telegram.org"></script>
     <script src="https://cdnjs.cloudflare.com"></script>
+    <script src="https://cdn.jsdelivr.net"></script>
     <style>
-        body { margin: 0; background: #000; overflow: hidden; font-family: 'Courier New', monospace; color: #00ffcc; touch-action: none; }
-        #ui { position: fixed; top: 15px; width: 100%; display: flex; justify-content: space-around; z-index: 100; pointer-events: none; }
-        .glass { background: rgba(0,255,200,0.1); border: 1px solid #00ffcc; padding: 10px 15px; border-radius: 12px; color: #fff; pointer-events: auto; backdrop-filter: blur(5px); font-size: 14px; text-align: center; }
-        .btn-panel { position: fixed; bottom: 20px; width: 100%; display: flex; justify-content: center; gap: 10px; z-index: 100; pointer-events: none; }
-        .action-btn { background: #00ffcc; color: #000; border: none; padding: 12px 20px; border-radius: 10px; font-weight: bold; cursor: pointer; pointer-events: auto; box-shadow: 0 0 15px rgba(0,255,200,0.3); }
-        #energy-bar { width: 80px; height: 6px; background: #111; border-radius: 3px; margin-top: 5px; border: 1px solid #00ffcc; overflow: hidden; }
-        #energy-fill { height: 100%; background: #00ffcc; width: 100%; transition: 0.3s; }
-        #status { position: fixed; top: 50%; width: 100%; text-align: center; color: #0f0; z-index: 999; }
+        body { margin: 0; background: #050505; overflow: hidden; font-family: 'Courier New', monospace; }
+        #ui { position: absolute; top: 20px; width: 100%; text-align: center; color: #00ffcc; pointer-events: none; text-shadow: 0 0 10px #00ffcc; }
+        .btn-shop { position: absolute; bottom: 30px; right: 20px; padding: 15px; background: rgba(0,255,204,0.2); border: 1px solid #00ffcc; color: white; pointer-events: auto; }
     </style>
 </head>
 <body>
-    <div id="status">INITIALIZING CORE...</div>
+    <div id="ui">
+        <h1>$MEOW: <span id="balance">0.00</span></h1>
+        <div id="status">НОЧЬ | ШТИЛЬ</div>
+    </div>
+    <button class="btn-shop" onclick="alert('Магазин откроется в @cybercat_global_2026')">LAVKA</button>
+
+<script>
+    const tg = window.Telegram.WebApp;
+    tg.expand();
+
+    // 1. МИР И ТУМАН
+    const scene = new THREE.Scene();
+    scene.fog = new THREE.FogExp2(0x050510, 0.04);
+
+    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    document.body.appendChild(renderer.domElement);
+
+    // 2. СОЛНЦЕ И ЛУНА (Смена циклов)
+    const sun = new THREE.DirectionalLight(0xffffff, 1);
+    sun.position.set(10, 20, 10);
+    sun.castShadow = true;
+    sun.shadow.mapSize.width = 1024;
+    scene.add(sun);
+    scene.add(new THREE.AmbientLight(0x404040, 0.5));
+
+    // 3. ЗВЕЗДНОЕ НЕБО (5000 точек)
+    const starGeo = new THREE.BufferGeometry();
+    const starPos = [];
+    for(let i=0; i<5000; i++) starPos.push((Math.random()-0.5)*500, Math.random()*200, (Math.random()-0.5)*500);
+    starGeo.setAttribute('position', new THREE.Float32BufferAttribute(starPos, 3));
+    const stars = new THREE.Points(starGeo, new THREE.PointsMaterial({color: 0xffffff, size: 0.2}));
+    scene.add(stars);
+
+    // 4. ГРУНТ (Трава)
+    const ground = new THREE.Mesh(new THREE.PlaneGeometry(100, 100), new THREE.MeshStandardMaterial({color: 0x101a10}));
+    ground.rotation.x = -Math.PI/2;
+    ground.receiveShadow = true;
+    scene.add(ground);
+
+    // 5. ЗАГРУЗКА ЖИЗНИ (Кот и Утки)
+    const loader = new THREE.GLTFLoader();
+    let cat;
+    const ducks = [];
+
+    // Заглушка, пока нет файлов:
+    const catBox = new THREE.Mesh(new THREE.BoxGeometry(1,1,1), new THREE.MeshStandardMaterial({color: 0x00ffcc}));
+    catBox.castShadow = true;
+    scene.add(catBox);
+    cat = catBox;
+
+    camera.position.set(0, 5, 10);
+    camera.lookAt(0, 0, 0);
+
+    // 6. ИГРОВОЙ ЦИКЛ
+    let balance = 0;
+    let time = 0;
+
+    function animate() {
+        requestAnimationFrame(animate);
+        time += 0.005;
+
+        // День/Ночь
+        sun.intensity = Math.max(0, Math.sin(time));
+        sun.position.x = Math.cos(time) * 20;
+        stars.material.opacity = sun.intensity > 0.2 ? 0 : 1;
+        
+        // Вращение кота (имитация жизни)
+        cat.rotation.y += 0.01;
+        
+        renderer.render(scene, camera);
+    }
     
-    <div id="ui" style="display:none">
-        <div class="glass">💰 <span id="bal">0</span> $MEOW<br><div id="energy-bar"><div id="energy-fill"></div></div></div>
-        <div class="glass">🌾 STOCK: <span id="inv">0</span></div>
-    </div>
+    // Клик - майнинг
+    window.addEventListener('click', () => {
+        balance += 0.1;
+        document.getElementById('balance').innerText = balance.toFixed(2);
+        tg.HapticFeedback.impactOccurred('medium');
+    });
 
-    <div class="btn-panel" style="display:none">
-        <button class="action-btn" onclick="window.placeBuilding()">BUILD (500)</button>
-        <button class="action-btn" onclick="window.sellAll()" style="background:#ff0066; color:#fff">SELL (10% FEE)</button>
-    </div>
-
-    <script>
-        let db, scene, camera, renderer, player, ground, npcs = [];
-        let targetPos;
-
-        // ИСПРАВЛЕНО: Прямая инициализация без лишних проверок
-        function initGame() {
-            document.getElementById('status').style.display = 'none';
-            document.getElementById('ui').style.display = 'flex';
-            document.querySelector('.btn-panel').style.display = 'flex';
-
-            // Экономическая матрица
-            db = JSON.parse(localStorage.getItem('cybercat_v80_final')) || { bal: 100, inv: 0, nrg: 100, buildings: [] };
-
-            scene = new THREE.Scene();
-            scene.background = new THREE.Color(0x010505);
-
-            camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 0.1, 1000);
-            renderer = new THREE.WebGLRenderer({ antialias: true });
-            renderer.setSize(window.innerWidth, window.innerHeight);
-            document.body.appendChild(renderer.domElement);
-
-            scene.add(new THREE.AmbientLight(0x404040));
-            const sun = new THREE.DirectionalLight(0x00ffcc, 1);
-            sun.position.set(10, 20, 10);
-            scene.add(sun);
-
-            ground = new THREE.Mesh(new THREE.PlaneGeometry(1000, 1000), new THREE.MeshStandardMaterial({color: 0x050505}));
-            ground.rotation.x = -Math.PI/2;
-            scene.add(ground);
-            scene.add(new THREE.GridHelper(1000, 50, 0x00ffcc, 0x111111));
-
-            player = new THREE.Mesh(new THREE.SphereGeometry(0.8, 16, 16), new THREE.MeshStandardMaterial({color: 0x00ffcc, emissive: 0x00ffcc}));
-            player.position.y = 0.8;
-            scene.add(player);
-            targetPos = new THREE.Vector3(0, 0.8, 0);
-
-            for(let i=0; i<15; i++) spawnNPC();
-            db.buildings.forEach(p => createBuildingMesh(p));
-
-            window.addEventListener('pointerdown', (e) => {
-                const mouse = new THREE.Vector2((e.clientX/window.innerWidth)*2-1, -(e.clientY/window.innerHeight)*2+1);
-                const ray = new THREE.Raycaster();
-                ray.setFromCamera(mouse, camera);
-                const hit = ray.intersectObject(ground);
-                if(hit.length > 0) targetPos.set(hit.point.x, 0.8, hit.point.z);
-            });
-
-            updateUI(); 
-            animate();
-        }
-
-        function spawnNPC() {
-            const n = new THREE.Mesh(new THREE.BoxGeometry(1.5, 1, 2), new THREE.MeshStandardMaterial({color: 0xffffff, wireframe: true}));
-            n.position.set(Math.random()*80-40, 0.5, Math.random()*80-40);
-            scene.add(n); 
-            npcs.push(n);
-        }
-
-        function createBuildingMesh(pos) {
-            const b = new THREE.Mesh(new THREE.BoxGeometry(5, 4, 5), new THREE.MeshStandardMaterial({color: 0x00ffcc, wireframe: true}));
-            b.position.set(pos.x, 2, pos.z); 
-            scene.add(b);
-        }
-
-        window.updateUI = () => {
-            document.getElementById('bal').innerText = Math.floor(db.bal);
-            document.getElementById('inv').innerText = db.inv;
-            document.getElementById('energy-fill').style.width = db.nrg + '%';
-            localStorage.setItem('cybercat_v80_final', JSON.stringify(db));
-        };
-
-        window.placeBuilding = () => {
-            if(db.bal >= 500) {
-                db.bal -= 500;
-                const pos = {x: player.position.x, z: player.position.z};
-                db.buildings.push(pos); 
-                createBuildingMesh(pos); 
-                updateUI();
-            }
-        };
-
-        window.sellAll = () => {
-            if(db.inv > 0) {
-                db.bal += (db.inv * 10) * 0.9; // 10% налог
-                db.inv = 0; 
-                updateUI();
-            }
-        };
-
-        function animate() {
-            requestAnimationFrame(animate);
-            if(player && targetPos) player.position.lerp(targetPos, 0.1);
-            
-            npcs.forEach(n => {
-                const dist = n.position.distanceTo(player.position);
-                // Flee AI: Боты убегают
-                if(dist < 12) {
-                    const dir = n.position.clone().sub(player.position).normalize();
-                    n.position.add(dir.multiplyScalar(0.1));
-                }
-                // Harvest: Автосбор
-                if(dist < 2.5 && db.nrg >= 1) {
-                    db.inv++; 
-                    db.nrg -= 1;
-                    n.position.set(Math.random()*100-50, 0.5, Math.random()*100-50);
-                    updateUI();
-                }
-            });
-
-            if(db.nrg < 100) { db.nrg += 0.05; updateUI(); }
-            
-            camera.position.set(player.position.x, 20, player.position.z + 25);
-            camera.lookAt(player.position);
-            renderer.render(scene, camera);
-        }
-
-        window.onload = initGame;
-    </script>
+    animate();
+</script>
 </body>
 </html>
