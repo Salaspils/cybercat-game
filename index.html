@@ -1,147 +1,141 @@
-html
 <!DOCTYPE html>
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>CyberCat Wealth</title>
+    <!-- ИСПОЛЬЗУЕМ САМЫЕ НАДЕЖНЫЕ ССЫЛКИ НА СКРИПТЫ -->
+    <script src="https://unpkg.com"></script>
+    <script src="https://unpkg.com"></script>
     <script src="https://telegram.org"></script>
-    <script src="https://cdnjs.cloudflare.com"></script>
-    <script src="https://cdn.jsdelivr.net"></script>
     <style>
-        body { margin: 0; overflow: hidden; background: #050510; color: #00ffcc; font-family: sans-serif; }
+        body { margin: 0; overflow: hidden; background: #050510; color: #00ffcc; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
         #ui { position: absolute; top: 20px; left: 20px; pointer-events: none; z-index: 10; }
-        .bal { font-size: 28px; font-weight: bold; text-shadow: 0 0 10px #00ffcc; }
-        #debug { position: absolute; bottom: 10px; right: 10px; font-size: 10px; color: #555; }
+        .bal { font-size: 32px; font-weight: bold; text-shadow: 0 0 15px #00ffcc; color: #00ffcc; }
+        #err-msg { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); color: red; text-align: center; display: none; }
     </style>
 </head>
 <body>
     <div id="ui">
         <div class="bal">$MEOW: <span id="balance">0</span></div>
-        <div style="font-size: 12px; opacity: 0.8;">КЛИКАЙ НА ГРЯДКИ</div>
+        <div style="font-size: 14px; opacity: 0.9; color: #fff;">КЛИКАЙ НА ГРЯДКИ (КОРИЧНЕВЫЕ КВАДРАТЫ)</div>
     </div>
-    <div id="debug">v1.4 STABLE</div>
+    <div id="err-msg">ОШИБКА ЗАГРУЗКИ ЯДРА ИГРЫ.<br>ПРОВЕРЬ ИНТЕРНЕТ И ОБНОВИ СТРАНИЦУ.</div>
 
     <script>
-        // ИСПРАВЛЕНИЕ ОШИБКИ СО СКРИНШОТА
-        let tg = {};
-        if (window.Telegram && window.Telegram.WebApp) {
-            tg = window.Telegram.WebApp;
-            try { tg.expand(); } catch(e) { console.log("Telegram expand error"); }
+        // ПРОВЕРКА ЗАГРУЗКИ БИБЛИОТЕКИ
+        if (typeof THREE === 'undefined') {
+            document.getElementById('err-msg').style.display = 'block';
         } else {
-            // Если мы не в Telegram, создаем пустые функции, чтобы код не ломался
-            tg.HapticFeedback = { impactOccurred: () => {}, notificationOccurred: () => {} };
+            initGame();
         }
 
-        const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x050510);
-        
-        const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
-        const renderer = new THREE.WebGLRenderer({ antialias: true });
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.setPixelRatio(window.devicePixelRatio);
-        document.body.appendChild(renderer.domElement);
+        function initGame() {
+            let tg = (window.Telegram && window.Telegram.WebApp) ? window.Telegram.WebApp : {
+                HapticFeedback: { impactOccurred: () => {}, notificationOccurred: () => {} },
+                expand: () => {}
+            };
+            try { tg.expand(); } catch(e) {}
 
-        // Свет
-        const sun = new THREE.DirectionalLight(0xffffff, 1.5);
-        sun.position.set(5, 10, 7.5);
-        scene.add(sun);
-        scene.add(new THREE.AmbientLight(0x4040ff, 0.5));
+            const scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x050510);
+            
+            const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
+            const renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(window.devicePixelRatio);
+            document.body.appendChild(renderer.domElement);
 
-        // Земля
-        const ground = new THREE.Mesh(
-            new THREE.PlaneGeometry(50, 50),
-            new THREE.MeshStandardMaterial({color: 0x1a1a1a})
-        );
-        ground.rotation.x = -Math.PI/2;
-        scene.add(ground);
+            // СВЕТ
+            const sun = new THREE.DirectionalLight(0xffffff, 1.8);
+            sun.position.set(5, 10, 7.5);
+            scene.add(sun);
+            scene.add(new THREE.AmbientLight(0x4040ff, 0.6));
 
-        // Огород
-        const plots = [];
-        const createPlot = (x, z) => {
-            const p = new THREE.Mesh(
-                new THREE.BoxGeometry(1.8, 0.2, 1.8),
-                new THREE.MeshStandardMaterial({color: 0x3d2b1f})
-            );
-            p.position.set(x, 0.1, z);
-            p.userData = { status: 'empty', time: 0, plant: null };
-            scene.add(p);
-            plots.push(p);
-        };
-        // Грядки 2x2
-        createPlot(-1.5, 1.5); createPlot(1.5, 1.5);
-        createPlot(-1.5, -1.5); createPlot(1.5, -1.5);
+            // ЗЕМЛЯ
+            const ground = new THREE.Mesh(new THREE.PlaneGeometry(100, 100), new THREE.MeshStandardMaterial({color: 0x111111}));
+            ground.rotation.x = -Math.PI/2;
+            scene.add(ground);
 
-        // Модели (Загружаем только если они есть в папке models/)
-        const loader = new THREE.GLTFLoader();
-        const load = (f, x, z, s) => {
-            loader.load('models/'+f, (g) => {
-                const m = g.scene;
-                m.position.set(x, 0, z);
-                m.scale.set(s, s, s);
-                scene.add(m);
-            }, undefined, (e) => console.log(f + " не найден в /models/"));
-        };
-        load('cat.glb', 0, 0, 1.5);
-        load('tree.glb', -5, -5, 3);
+            // ГРЯДКИ (ПРОЦЕДУРНЫЕ)
+            const plots = [];
+            const createPlot = (x, z) => {
+                const p = new THREE.Mesh(new THREE.BoxGeometry(2, 0.3, 2), new THREE.MeshStandardMaterial({color: 0x3d2b1f}));
+                p.position.set(x, 0.15, z);
+                p.userData = { status: 'empty', time: 0, plant: null };
+                scene.add(p);
+                plots.push(p);
+            };
+            createPlot(-2, 2); createPlot(2, 2); createPlot(-2, -2); createPlot(2, -2);
 
-        camera.position.set(0, 10, 12);
-        camera.lookAt(0, 0, 0);
+            // МОДЕЛИ
+            const loader = new THREE.GLTFLoader();
+            const load = (f, x, z, s) => {
+                loader.load('models/'+f, (g) => {
+                    const m = g.scene;
+                    m.position.set(x, 0, z);
+                    m.scale.set(s, s, s);
+                    scene.add(m);
+                }, undefined, (e) => console.log("Файл не найден в /models/:", f));
+            };
+            load('cat.glb', 0, 0, 1.5);
+            load('tree.glb', -6, -6, 3.5);
 
-        let balance = parseInt(localStorage.getItem('meow_bal')) || 0;
-        document.getElementById('balance').innerText = balance;
+            camera.position.set(0, 12, 15);
+            camera.lookAt(0, 0, 0);
 
-        // Взаимодействие
-        const raycaster = new THREE.Raycaster();
-        const mouse = new THREE.Vector2();
+            let balance = parseInt(localStorage.getItem('meow_bal')) || 0;
+            document.getElementById('balance').innerText = balance;
 
-        window.addEventListener('pointerdown', (e) => {
-            mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
-            mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
-            raycaster.setFromCamera(mouse, camera);
-            const hits = raycaster.intersectObjects(plots);
+            const raycaster = new THREE.Raycaster();
+            const mouse = new THREE.Vector2();
 
-            if (hits.length > 0) {
-                const p = hits[0].object;
-                if (p.userData.status === 'empty') {
-                    p.userData.status = 'growing';
-                    p.userData.time = Date.now();
-                    const s = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.5, 0.5), new THREE.MeshStandardMaterial({color: 0x00ff00}));
-                    s.position.set(p.position.x, 0.5, p.position.z);
-                    scene.add(s);
-                    p.userData.plant = s;
-                    tg.HapticFeedback.impactOccurred('light');
-                } else if (p.userData.status === 'ready') {
-                    balance += 10;
-                    document.getElementById('balance').innerText = balance;
-                    localStorage.setItem('meow_bal', balance);
-                    scene.remove(p.userData.plant);
-                    p.userData.status = 'empty';
-                    tg.HapticFeedback.notificationOccurred('success');
-                }
-            }
-        });
+            window.addEventListener('pointerdown', (e) => {
+                mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+                mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+                raycaster.setFromCamera(mouse, camera);
+                const hits = raycaster.intersectObjects(plots);
 
-        function animate() {
-            requestAnimationFrame(animate);
-            const now = Date.now();
-            plots.forEach(p => {
-                if (p.userData.status === 'growing' && now - p.userData.time > 3000) {
-                    p.userData.status = 'ready';
-                    p.userData.plant.scale.set(2, 3, 2);
-                    p.userData.plant.material.color.set(0xffcc00);
+                if (hits.length > 0) {
+                    const p = hits.object;
+                    if (p.userData.status === 'empty') {
+                        p.userData.status = 'growing';
+                        p.userData.time = Date.now();
+                        const s = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.5, 1), new THREE.MeshStandardMaterial({color: 0x00ff00}));
+                        s.position.set(p.position.x, 0.7, p.position.z);
+                        scene.add(s);
+                        p.userData.plant = s;
+                        tg.HapticFeedback.impactOccurred('light');
+                    } else if (p.userData.status === 'ready') {
+                        balance += 10;
+                        document.getElementById('balance').innerText = balance;
+                        localStorage.setItem('meow_bal', balance);
+                        scene.remove(p.userData.plant);
+                        p.userData.status = 'empty';
+                        tg.HapticFeedback.notificationOccurred('success');
+                    }
                 }
             });
-            renderer.render(scene, camera);
+
+            function animate() {
+                requestAnimationFrame(animate);
+                const now = Date.now();
+                plots.forEach(p => {
+                    if (p.userData.status === 'growing' && now - p.userData.time > 3000) {
+                        p.userData.status = 'ready';
+                        p.userData.plant.scale.set(2, 3, 2);
+                        p.userData.plant.material.color.set(0xffcc00);
+                    }
+                });
+                renderer.render(scene, camera);
+            }
+            animate();
+            window.addEventListener('resize', () => {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            });
         }
-        animate();
-        
-        // Авто-ресайз окна
-        window.addEventListener('resize', () => {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-        });
     </script>
 </body>
 </html>
