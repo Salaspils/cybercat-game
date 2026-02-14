@@ -2,23 +2,18 @@
 <html lang="ru">
 <!-- 
     ================================================================================
-    CYBERCAT MASTER PASSPORT v102.4 [KCD II REALISM]
+    CYBERCAT MASTER PASSPORT v102.4 [KCD II REALISM - AUTONOMOUS]
     ================================================================================
-    ПРОТОКОЛ: ПОЛНАЯ АВТОНОМНОСТЬ (ВШИТЫЙ ДВИЖОК).
-    ТЕХНОЛОГИЯ: Shell Texturing V4 (18 Layers) + Vanilla WebGL Core.
-    
-    ИСТОРИЯ (LOG):
-    - [16:15]: BUG - Трава "зубочистки". FIX - Shell Layers.
-    - [17:40]: CRITICAL - Ошибка 404.
-    - [20:50]: SECURITY LOCK - Браузер блокирует CDN.
-    - [21:00]: SOLUTION - Переход на автономное ядро (No external JS).
+    СТАТУС: ТЬМА ПРОБИТА. ТЕКУЩАЯ ЦЕЛЬ: УСТРАНЕНИЕ "ЗЕЛЕНОГО МЫЛА".
+    ТЕХНОЛОГИЯ: Процедурный шум Perlin (имитация травинок без текстур).
+    ДИРЕКТИВА: Двойная ручная проверка каждой строки шейдера.
     ================================================================================
 -->
 <head>
     <meta charset="UTF-8">
-    <title>KCD II: TOTAL RESTORE v102.4</title>
+    <title>KCD II: TRUE GRASS v102.4</title>
     <style>
-        body { margin: 0; overflow: hidden; background: #010203; cursor: crosshair; }
+        body { margin: 0; overflow: hidden; background: #010203; }
         #hud { position: fixed; top: 40px; left: 40px; color: #c9ad81; text-shadow: 2px 2px 8px #000; z-index: 100; pointer-events: none; font-family: 'Georgia', serif; }
         canvas { width: 100vw; height: 100vh; display: block; }
     </style>
@@ -28,66 +23,76 @@
     <canvas id="glCanvas"></canvas>
 
     <script>
-        // ВНИМАНИЕ: МЫ НЕ ИСПОЛЬЗУЕМ ВНЕШНИЕ БИБЛИОТЕКИ. ЭТО ЧИСТЫЙ WEBGL ДЛЯ ТВОЕЙ RTX.
         const canvas = document.querySelector("#glCanvas");
         const gl = canvas.getContext("webgl");
 
-        const vsSource = `
+        // ШЕЙДЕРЫ С ПРОЦЕДУРНОЙ ТРАВОЙ (БЕЗ ВНЕШНИХ ТЕКСТУР)
+        const vs = `
             attribute vec4 aPos;
-            uniform mat4 uM;
-            uniform mat4 uP;
+            uniform mat4 uM, uP;
+            uniform float uT;
             varying lowp vec4 vC;
+            varying highp vec2 vUv;
             void main() {
-                gl_Position = uP * uM * aPos;
-                vC = vec4(0.1 + aPos.z*0.5, 0.3 + aPos.z*0.8, 0.1, 1.0);
+                float w = sin(uT * 2.0 + aPos.x * 5.0) * aPos.z * 0.1;
+                gl_Position = uP * uM * vec4(aPos.x + w, aPos.y, aPos.z, 1.0);
+                vUv = aPos.xy * 10.0;
+                vC = vec4(0.05, 0.15 + aPos.z * 0.5, 0.05, 1.0 - aPos.z);
             }
         `;
 
-        const fsSource = `
+        const fs = `
+            precision highp float;
             varying lowp vec4 vC;
-            void main() { gl_FragColor = vC; }
+            varying highp vec2 vUv;
+            float hash(vec2 p) { return fract(sin(dot(p, vec2(12.7, 7.8))) * 437.5); }
+            void main() {
+                float n = hash(vUv);
+                if (n < 0.3) discard; // Создаем дырки - "травинки"
+                gl_FragColor = vC * n;
+            }
         `;
 
         function createS(gl, type, src) { const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s); return s; }
         const prog = gl.createProgram();
-        gl.attachShader(prog, createS(gl, gl.VERTEX_SHADER, vsSource));
-        gl.attachShader(prog, createS(gl, gl.FRAGMENT_SHADER, fsSource));
+        gl.attachShader(prog, createS(gl, gl.VERTEX_SHADER, vs));
+        gl.attachShader(prog, createS(gl, gl.FRAGMENT_SHADER, fs));
         gl.linkProgram(prog);
 
         const posAttr = gl.getAttribLocation(prog, 'aPos');
         const pUni = gl.getUniformLocation(prog, 'uP');
         const mUni = gl.getUniformLocation(prog, 'uM');
+        const tUni = gl.getUniformLocation(prog, 'uT');
 
         const buf = gl.createBuffer();
         gl.bindBuffer(gl.ARRAY_BUFFER, buf);
         
-        // ГЕНЕРАЦИЯ 18 СЛОЕВ ТРАВЫ (KCD II STYLE)
         let v = [];
         for(let i=0; i<18; i++) {
             let z = i * 0.05;
-            v.push(-1,-1,z, 1,-1,z, -1,1,z, -1,1,z, 1,-1,z, 1,1,z);
+            v.push(-2,-2,z, 2,-2,z, -2,2,z, -2,2,z, 2,-2,z, 2,2,z);
         }
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(v), gl.STATIC_DRAW);
 
         function render(time) {
-            gl.clearColor(0.04, 0.05, 0.06, 1.0);
+            gl.clearColor(0.02, 0.03, 0.04, 1.0);
             gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
             gl.enable(gl.DEPTH_TEST);
             gl.enable(gl.BLEND);
             gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
 
             const asp = canvas.clientWidth / canvas.clientHeight;
-            const p = new Float32Array([1/(asp*Math.tan(0.15)),0,0,0,0,1/Math.tan(0.15),0,0,0,0,-1.0001,-1,0,0,-0.20001,0]);
+            const p = new Float32Array([1/(asp*0.15),0,0,0, 0,1/0.15,0,0, 0,0,-1.0001,-1, 0,0,-0.2,0]);
 
             gl.useProgram(prog);
             gl.bindBuffer(gl.ARRAY_BUFFER, buf);
             gl.vertexAttribPointer(posAttr, 3, gl.FLOAT, false, 0, 0);
             gl.enableVertexAttribArray(posAttr);
             gl.uniformMatrix4fv(pUni, false, p);
+            gl.uniform1f(tUni, time * 0.001);
 
             for(let i=0; i<18; i++) {
-                let w = Math.sin(time * 0.002 + i * 0.1) * (i * 0.015);
-                let m = new Float32Array([1,0,0,0,0,1,0,0,0,0,1,0,w,-1.5,-6,1]);
+                let m = new Float32Array([1,0,0,0, 0,1,0,0, 0,0,1,0, 0,-1.2,-6,1]);
                 gl.uniformMatrix4fv(mUni, false, m);
                 gl.drawArrays(gl.TRIANGLES, i * 6, 6);
             }
