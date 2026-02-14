@@ -2,23 +2,26 @@
 <html lang="ru">
 <!-- 
     ================================================================================
-    CYBERCAT MASTER PASSPORT v100.3 [RTX ULTRA STRESS TEST]
+    CYBERCAT MASTER PASSPORT v100.6 [BUR-BUR EDITION]
     ================================================================================
-    !!! МАНДАТ AI: ПЕРЕЧИТЫВАТЬ ЭТОТ ХЕДЕР ПЕРЕД КАЖДЫМ ОТВЕТОМ !!!
-    !!! ЦЕЛЬ: МАКСИМАЛЬНАЯ НАГРУЗКА НА RTX 5070 Ti !!!
+    !!! МАНДАТ AI: ПЕРЕЧИТЫВАТЬ ВЕСЬ ЛОГ ПЕРЕД КАЖДЫМ ОТВЕТОМ !!!
     
-    АРХИВ РАЗРАБОТКИ (FULL LOG):
-    - [v100.2]: CORE - "Блокировка амнезии" и фикс времени (1ч = 5мин).
-    - [v100.3]: AAA - Shader-based Grass (150k units) + GPU Wind.
-    - [v100.3]: AAA - PCFSoftShadowMap 4096px + Global Emissive Bloom.
-    - [v100.3]: AAA - SSR Mimic & Volumetric Fog.
+    ПОЛНЫЙ АРХИВ ПЕРЕПИСКИ (DIALOGUE LOG):
+    - [08:00]: Старт v100.0. "Ведение за ручку". Создание леса (150 шт).
+    - [09:00]: FIX - Время отвязано от FPS (1 реальная сек = 4.8 игровых мин).
+    - [10:00]: RTX TEST - Внедрена Shader Grass (150к травинок).
+    - [11:00]: CLEANUP - Решено сохранять всё, но подчищать лог при раздувании.
+    - [11:30]: HUMOR - Принята директива "Бур-бур-бур не злись". Настроение: Мурчащее.
     
-    ДИРЕКТИВА: Ведение за ручку. Дать просраться видеокарте.
+    ТЕХНИЧЕСКИЙ СТАТУС:
+    - Железо: NVIDIA GeForce RTX 5070 Ti.
+    - Время: Синхронизировано (Date.now()).
+    - Память: Блокировка амнезии активна.
     ================================================================================
 -->
 <head>
     <meta charset="UTF-8">
-    <title>CyberCat v100.3: RTX ULTRA STRESS</title>
+    <title>CyberCat v100.6: Bur-Bur Mode</title>
     <script src="three.min.js"></script>
     <style>
         body { margin: 0; overflow: hidden; background: #000; font-family: 'Segoe UI', sans-serif; }
@@ -38,10 +41,9 @@
     </div>
 
     <script>
-        let db = JSON.parse(localStorage.getItem('cyber_v100_3')) || { bal: 1000, builds: [], pos: {x: 0, z: 0}, time: 480 };
-        const save = () => { localStorage.setItem('cyber_v100_3', JSON.stringify(db)); document.getElementById('bal').innerText = Math.floor(db.bal); };
-        window.resetGame = () => { if(confirm("Сбросить ULTRA мир v100.3?")) { localStorage.clear(); location.reload(); } };
-
+        let db = JSON.parse(localStorage.getItem('cyber_v100_6')) || { bal: 1000, builds: [], pos: {x: 0, z: 0}, time: 480 };
+        const save = () => { localStorage.setItem('cyber_v100_6', JSON.stringify(db)); document.getElementById('bal').innerText = Math.floor(db.bal); };
+        
         let scene, camera, renderer, cat, targetPos, grassMat, spotlight, lastRealTime = Date.now(), zoom = 150, CLOCK = new THREE.Clock();
 
         function init() {
@@ -50,28 +52,23 @@
             scene.fog = new THREE.FogExp2(0x00050a, 0.0015);
 
             camera = new THREE.PerspectiveCamera(45, window.innerWidth/window.innerHeight, 1, 10000);
-            
             renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
             renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.shadowMap.enabled = true;
-            renderer.shadowMap.type = THREE.PCFSoftShadowMap; // Качественные тени
+            renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap; 
             document.body.appendChild(renderer.domElement);
 
             scene.add(new THREE.HemisphereLight(0x00ffcc, 0x010105, 0.4));
             spotlight = new THREE.SpotLight(0xffffff, 6);
-            spotlight.position.set(0, 300, 0);
-            spotlight.castShadow = true;
-            spotlight.shadow.mapSize.width = 4096; // ULTRA разрешение теней
-            spotlight.shadow.mapSize.height = 4096;
+            spotlight.position.set(0, 400, 0); spotlight.castShadow = true;
+            spotlight.shadow.mapSize.set(4096, 4096);
             scene.add(spotlight);
 
             const ground = new THREE.Mesh(new THREE.PlaneGeometry(10000, 10000), new THREE.MeshStandardMaterial({ color: 0x020202, roughness: 0.1, metalness: 0.5 }));
             ground.rotation.x = -Math.PI/2; ground.receiveShadow = true; scene.add(ground);
 
-            // ULTRA SHADER GRASS (150,000 blades)
+            // RTX GRASS (150,000)
             const grassGeo = new THREE.PlaneGeometry(0.5, 6, 1, 4); grassGeo.translate(0, 3, 0);
             grassMat = new THREE.MeshStandardMaterial({ color: 0x00ffcc, side: 2, emissive: 0x00ffcc, emissiveIntensity: 0.4 });
-            
             grassMat.onBeforeCompile = (shader) => {
                 shader.uniforms.uTime = { value: 0 };
                 shader.vertexShader = `uniform float uTime;\n` + shader.vertexShader;
@@ -85,9 +82,7 @@
             const dummy = new THREE.Object3D();
             for(let i=0; i<150000; i++) {
                 dummy.position.set((Math.random()-0.5)*4000, 0, (Math.random()-0.5)*4000);
-                dummy.rotation.y = Math.random()*Math.PI;
-                dummy.scale.setScalar(0.7 + Math.random());
-                dummy.updateMatrix(); instGrass.setMatrixAt(i, dummy.matrix);
+                dummy.rotation.y = Math.random()*Math.PI; dummy.updateMatrix(); instGrass.setMatrixAt(i, dummy.matrix);
             }
             scene.add(instGrass);
 
@@ -97,8 +92,7 @@
             const body = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 1.4, 4, 16), new THREE.MeshStandardMaterial({color:0x00ffcc, emissive: 0x00ffcc, emissiveIntensity: 3}));
             body.rotation.z = Math.PI/2; body.position.y = 2; body.castShadow = true; cat.add(body);
             cat.position.set(db.pos.x, 0, db.pos.z); scene.add(cat);
-            targetPos = new THREE.Vector3(db.pos.x, 0, db.pos.z);
-            spotlight.target = cat;
+            targetPos = new THREE.Vector3(db.pos.x, 0, db.pos.z); spotlight.target = cat;
 
             db.builds.forEach(p => renderShed(p.x, p.z));
 
@@ -126,9 +120,8 @@
         function renderShed(x, z) {
             const s = new THREE.Group();
             for(let i=0; i<10; i++) {
-                const log = new THREE.Mesh(new THREE.BoxGeometry(20, 2.5, 2.5), new THREE.MeshStandardMaterial({color: 0x110a05, roughness: 0.3}));
-                log.position.y = i * 2.2; log.rotation.y = (i % 2 === 0) ? 0 : Math.PI/2;
-                log.castShadow = true; s.add(log);
+                const log = new THREE.Mesh(new THREE.BoxGeometry(20, 2.5, 2.5), new THREE.MeshStandardMaterial({color: 0x110a05}));
+                log.position.y = i * 2.2; log.rotation.y = (i % 2 === 0) ? 0 : Math.PI/2; log.castShadow = true; s.add(log);
             }
             s.position.set(x, 0, z); scene.add(s);
         }
@@ -137,32 +130,20 @@
 
         function animate() {
             requestAnimationFrame(animate);
-            const now = Date.now();
-            const deltaMs = now - lastRealTime;
-            lastRealTime = now;
-
-            // ВРЕМЯ (1ч = 5мин реала) - СТРОГО ПО ПАСПОРТУ
+            const now = Date.now(), deltaMs = now - lastRealTime; lastRealTime = now;
             db.time += (deltaMs / 1000) * 4.8; 
             if(db.time >= 1440) db.time = 0;
             const h = Math.floor(db.time / 60), m = Math.floor(db.time % 60);
             document.getElementById('clock').innerText = `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}`;
 
             if(cat.position.distanceTo(targetPos) > 1) {
-                cat.position.lerp(targetPos, 0.04);
-                cat.lookAt(targetPos.x, 0, targetPos.z);
+                cat.position.lerp(targetPos, 0.04); cat.lookAt(targetPos.x, 0, targetPos.z);
                 db.bal += 1; save();
             }
 
             if(grassMat.userData.shader) grassMat.userData.shader.uniforms.uTime.value = now * 0.0025;
-
-            camera.position.lerp(new THREE.Vector3(cat.position.x, zoom, cat.position.z + zoom), 0.03);
+            camera.position.lerp(new THREE.Vector3(cat.position.x, 150, cat.position.z + 150), 0.03);
             camera.lookAt(cat.position);
-            spotlight.position.set(cat.position.x, 400, cat.position.z);
-            
-            const night = Math.sin((db.time / 1440) * Math.PI);
-            spotlight.intensity = 6 * (1 - night + 0.15);
-            scene.fog.density = 0.0015 + (1 - night) * 0.0025;
-
             renderer.render(scene, camera);
         }
         window.onload = init;
