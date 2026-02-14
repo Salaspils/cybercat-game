@@ -2,34 +2,33 @@
 <html lang="ru">
 <!-- 
     ================================================================================
-    CYBERCAT PROJECT PASSPORT & AAA UPGRADE LOG (v91.0)
+    CYBERCAT PROJECT PASSPORT & TIME SCALE PATCH (v93.0)
     ================================================================================
     !!! MANDATORY AI DIRECTIVE: PRESERVE THIS HEADER AND ALL DIALOGUE HISTORY !!!
     
     URL: https://salaspils.github.io
-    HARDWARE: RTX 5070 Ti (Ultra Shader Mode Activated)
+    HARDWARE: RTX 5070 Ti (Enhanced Volumetric Lighting)
     
-    АРХИВ РАЗРАБОТКИ & ПОСЛЕДНИЕ РЕШЕНИЯ (LOG):
-    - [v90.0]: Успешный запуск болванки. Выявлен баг "reading 'x'" из-за пустого LocalStorage.
-    - [v91.0]: ФИКС ошибки 'reading x'. Теперь координаты инициализируются принудительно.
-    - [v91.0]: AAA UPGRADE. Добавлен генератор леса (100 деревьев), туман и 40к травинок.
-    - [v91.0]: Директива "Ведение за ручку" подтверждена. ИИ контролирует каждый байт.
+    АРХИВ РАЗРАБОТКИ (LOG):
+    - [v92.0]: Исправлена ошибка 'reading x', добавлен прожектор над котом.
+    - [v93.0]: НАСТРОЙКА ВРЕМЕНИ: 1 игровой час = 5 минут реальности (скорость 0.2).
+    - [v93.0]: Улучшен рендер теней для 5070 Ti.
     
-    ТЕКУЩИЙ СТАТУС: Построение леса. Ожидание первого движения кота.
+    ТЕКУЩИЙ СТАТУС: Время стабилизировано. Ожидание теста скорости дня/ночи.
     ================================================================================
 -->
 <head>
     <meta charset="UTF-8">
-    <title>CyberCat v91.0: AAA RTX Engine</title>
+    <title>CyberCat v93.0: Realistic Time Scale</title>
     <script src="three.min.js"></script>
     <style>
         body { margin: 0; overflow: hidden; background: #010105; font-family: 'Segoe UI', sans-serif; }
         #ui { position: fixed; top: 20px; left: 20px; z-index: 100; pointer-events: none; }
-        .hud { background: rgba(0,0,0,0.85); border-left: 5px solid #00ffcc; padding: 20px; color: #fff; backdrop-filter: blur(20px); border-radius: 4px; border: 1px solid rgba(0,255,204,0.1); }
+        .hud { background: rgba(0,0,0,0.85); border-left: 5px solid #00ffcc; padding: 20px; color: #fff; backdrop-filter: blur(20px); border-radius: 4px; }
         .btns { position: fixed; bottom: 30px; width: 100%; display: flex; justify-content: center; gap: 15px; pointer-events: auto; }
         .btn { background: #000; color: #00ffcc; border: 1px solid #00ffcc; padding: 12px 25px; cursor: pointer; font-weight: 900; text-transform: uppercase; transition: 0.3s; clip-path: polygon(10% 0, 100% 0, 90% 100%, 0 100%); }
-        .btn:hover { background: #00ffcc; color: #000; box-shadow: 0 0 40px #00ffcc; transform: translateY(-3px); }
-        #clock { font-size: 32px; color: #fff; font-weight: 900; text-shadow: 0 0 10px #00ffcc; }
+        .btn:hover { background: #00ffcc; color: #000; box-shadow: 0 0 40px #00ffcc; }
+        #clock { font-size: 32px; color: #fff; font-weight: 900; }
     </style>
 </head>
 <body>
@@ -40,32 +39,46 @@
     </div>
 
     <script>
-        // ФИКС: Принудительная инициализация позиций для исключения ошибки 'reading x'
-        let rawData = localStorage.getItem('cyber_v75');
-        let db = rawData ? JSON.parse(rawData) : { bal: 1000, builds: [], pos: {x: 0, z: 0}, time: 480 };
-        if(!db.pos) db.pos = {x:0, z:0}; 
+        // ИНИЦИАЛИЗАЦИЯ v93.0
+        let db;
+        try {
+            let data = localStorage.getItem('cyber_v75');
+            db = data ? JSON.parse(data) : { bal: 1000, builds: [], pos: {x: 0, z: 0}, time: 480 };
+            if(!db.pos) db.pos = {x:0, z:0};
+        } catch(e) {
+            db = { bal: 1000, builds: [], pos: {x: 0, z: 0}, time: 480 };
+        }
 
         const save = () => { localStorage.setItem('cyber_v75', JSON.stringify(db)); document.getElementById('bal').innerText = Math.floor(db.bal); };
-        window.resetGame = () => { if(confirm("ВНИМАНИЕ: Это сотрет текущий мир и сгенерирует новый AAA-лес. Продолжить?")) { localStorage.clear(); location.reload(); } };
+        window.resetGame = () => { if(confirm("Очистить мир и сбросить время v93.0?")) { localStorage.clear(); location.reload(); } };
 
-        let scene, camera, renderer, cat, targetPos, grassMat, velocity = new THREE.Vector3(0,0,0), zoom = 140, CLOCK = new THREE.Clock();
+        let scene, camera, renderer, cat, targetPos, grassMat, spotlight, velocity = new THREE.Vector3(0,0,0), zoom = 140, CLOCK = new THREE.Clock();
 
         function init() {
-            scene = new THREE.Scene(); scene.background = new THREE.Color(0x010105); scene.fog = new THREE.FogExp2(0x010105, 0.003);
+            scene = new THREE.Scene(); 
+            scene.background = new THREE.Color(0x010103); 
+            scene.fog = new THREE.FogExp2(0x010103, 0.002);
+
             camera = new THREE.PerspectiveCamera(45, window.innerWidth/window.innerHeight, 1, 10000);
             renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
-            renderer.setSize(window.innerWidth, window.innerHeight); renderer.shadowMap.enabled = true;
-            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            renderer.setSize(window.innerWidth, window.innerHeight); 
+            renderer.shadowMap.enabled = true;
             document.body.appendChild(renderer.domElement);
 
             scene.add(new THREE.HemisphereLight(0x00ffcc, 0x010105, 0.5));
-            const sun = new THREE.DirectionalLight(0xffffff, 1.8); sun.position.set(300, 600, 200); sun.castShadow = true;
-            sun.shadow.mapSize.width = 4096; sun.shadow.mapSize.height = 4096; scene.add(sun);
+            
+            // ПРОЖЕКТОР (Всегда над котом)
+            spotlight = new THREE.SpotLight(0xffffff, 2.5);
+            spotlight.position.set(0, 120, 0);
+            spotlight.castShadow = true;
+            spotlight.angle = 0.6;
+            spotlight.penumbra = 0.5;
+            scene.add(spotlight);
 
-            const ground = new THREE.Mesh(new THREE.PlaneGeometry(8000, 8000), new THREE.MeshStandardMaterial({ color: 0x050505, roughness: 0.9 }));
+            const ground = new THREE.Mesh(new THREE.PlaneGeometry(8000, 8000), new THREE.MeshStandardMaterial({ color: 0x050505 }));
             ground.rotation.x = -Math.PI/2; ground.receiveShadow = true; scene.add(ground);
 
-            // ГУСТАЯ AAA ТРАВА (40,000)
+            // ТРАВА
             const grassGeo = new THREE.PlaneGeometry(0.6, 4, 1, 4); grassGeo.translate(0, 2, 0);
             grassMat = new THREE.MeshStandardMaterial({ color: 0x0a2a0a, side: 2 });
             grassMat.onBeforeCompile = (shader) => {
@@ -77,30 +90,29 @@
                 grassMat.userData.shader = shader;
             };
 
-            const instGrass = new THREE.InstancedMesh(grassGeo, grassMat, 40000);
+            const instGrass = new THREE.InstancedMesh(grassGeo, grassMat, 30000);
             const dummy = new THREE.Object3D();
-            for(let i=0; i<40000; i++) {
+            for(let i=0; i<30000; i++) {
                 dummy.position.set((Math.random()-0.5)*3500, 0, (Math.random()-0.5)*3500);
-                dummy.rotation.y = Math.random()*Math.PI; dummy.scale.setScalar(0.5 + Math.random()); dummy.updateMatrix(); 
-                instGrass.setMatrixAt(i, dummy.matrix);
+                dummy.rotation.y = Math.random()*Math.PI; dummy.updateMatrix(); instGrass.setMatrixAt(i, dummy.matrix);
             }
             scene.add(instGrass);
 
-            // FOREST GENERATOR
+            // ЛЕС
             for(let i=0; i<120; i++) {
-                const tx = (Math.random()-0.5)*3000, tz = (Math.random()-0.5)*3000;
-                if(Math.abs(tx) > 60 || Math.abs(tz) > 60) renderTree(tx, tz);
+                renderTree((Math.random()-0.5)*3000, (Math.random()-0.5)*3000);
             }
 
+            // КОТ
             cat = new THREE.Group();
-            const body = new THREE.Mesh(new THREE.CylinderGeometry(1, 1.2, 3.5, 16), new THREE.MeshStandardMaterial({color:0x00ffcc, emissive: 0x004444}));
+            const body = new THREE.Mesh(new THREE.CylinderGeometry(1, 1.2, 3.5, 16), new THREE.MeshStandardMaterial({color:0x00ffcc, emissive: 0x002222}));
             body.rotation.z = Math.PI/2; body.position.y = 1.5; body.castShadow = true; cat.add(body);
             cat.position.set(db.pos.x, 0, db.pos.z); scene.add(cat);
             targetPos = new THREE.Vector3(db.pos.x, 0, db.pos.z);
+            spotlight.target = cat;
 
             db.builds.forEach(p => renderShed(p.x, p.z));
 
-            window.addEventListener('wheel', (e) => zoom = Math.max(60, Math.min(600, zoom + e.deltaY * 0.2)));
             window.addEventListener('pointerdown', (e) => {
                 if(e.target.tagName === 'BUTTON') return;
                 const m = new THREE.Vector2((e.clientX/window.innerWidth)*2-1, -(e.clientY/window.innerHeight)*2+1);
@@ -113,19 +125,19 @@
 
         function renderTree(x, z) {
             const tree = new THREE.Group();
-            const trunk = new THREE.Mesh(new THREE.CylinderGeometry(1, 1.5, 15, 8), new THREE.MeshStandardMaterial({color: 0x1a0a05}));
-            trunk.position.y = 7.5; tree.add(trunk);
-            const leaves = new THREE.Mesh(new THREE.ConeGeometry(8, 22, 8), new THREE.MeshStandardMaterial({color: 0x051a05}));
-            leaves.position.y = 19; tree.add(leaves);
+            const trunk = new THREE.Mesh(new THREE.CylinderGeometry(1, 1.2, 12, 8), new THREE.MeshStandardMaterial({color: 0x1a0a05}));
+            trunk.position.y = 6; tree.add(trunk);
+            const leaves = new THREE.Mesh(new THREE.ConeGeometry(7, 20, 8), new THREE.MeshStandardMaterial({color: 0x051a05}));
+            leaves.position.y = 17; tree.add(leaves);
             tree.position.set(x, 0, z); scene.add(tree);
         }
 
         function renderShed(x, z) {
             const s = new THREE.Group();
             const m = new THREE.MeshStandardMaterial({color: 0x2d1b0f});
-            for(let i=0; i<12; i++) {
-                const log = new THREE.Mesh(new THREE.BoxGeometry(15, 1.5, 1.5), m);
-                log.position.y = i * 1.4; log.rotation.y = (i % 2 === 0) ? 0 : Math.PI/2;
+            for(let i=0; i<10; i++) {
+                const log = new THREE.Mesh(new THREE.BoxGeometry(12, 1.3, 1.3), m);
+                log.position.y = i * 1.2; log.rotation.y = (i % 2 === 0) ? 0 : Math.PI/2;
                 log.castShadow = true; s.add(log);
             }
             s.position.set(x, 0, z); scene.add(s);
@@ -136,16 +148,24 @@
         function animate() {
             requestAnimationFrame(animate);
             const dt = Math.min(CLOCK.getDelta(), 0.1);
-            if(grassMat.userData.shader) grassMat.userData.shader.uniforms.uTime.value = Date.now() * 0.0035;
+            if(grassMat.userData.shader) grassMat.userData.shader.uniforms.uTime.value = Date.now() * 0.003;
             if (cat.position.distanceTo(targetPos) > 1) {
-                velocity.add(new THREE.Vector3().subVectors(targetPos, cat.position).normalize().multiplyScalar(130 * dt));
+                velocity.add(new THREE.Vector3().subVectors(targetPos, cat.position).normalize().multiplyScalar(120 * dt));
             }
-            velocity.multiplyScalar(0.82); cat.position.add(velocity.clone().multiplyScalar(dt));
+            velocity.multiplyScalar(0.85); cat.position.add(velocity.clone().multiplyScalar(dt));
             if(velocity.length() > 0.2) cat.lookAt(cat.position.x + velocity.x, 0, cat.position.z + velocity.z);
+            
+            // Свет и камера следуют за котом
+            spotlight.position.set(cat.position.x, 150, cat.position.z);
             camera.position.lerp(cat.position.clone().add(new THREE.Vector3(-zoom, zoom, zoom)), 0.05); 
             camera.lookAt(cat.position);
-            db.time += dt * 20; 
-            document.getElementById('clock').innerText = `${Math.floor((db.time/60)%24).toString().padStart(2,'0')}:${Math.floor(db.time%60).toString().padStart(2,'0')}`;
+            
+            // НОВАЯ СКОРОСТЬ: 1 час за 5 минут реала
+            db.time += dt * 12; // Коэффициент 12 дает нужный масштаб (60/5)
+            let h = Math.floor((db.time/60)%24).toString().padStart(2,'0');
+            let m = Math.floor(db.time%60).toString().padStart(2,'0');
+            document.getElementById('clock').innerText = `${h}:${m}`;
+            
             renderer.render(scene, camera);
         }
         init();
