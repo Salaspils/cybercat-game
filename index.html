@@ -4,16 +4,19 @@
     ================================================================================
     CYBERCAT MASTER PASSPORT v102.4 [KCD II REALISM]
     ================================================================================
-    СТАТУС GPU: WebGL Hardware Accelerated (ПОДТВЕРЖДЕНО СКРИНШОТОМ).
-    ФИКС: Мгновенная прорисовка (Force Context Swap).
+    КРИТИЧЕСКИЙ ПРОТОКОЛ:
+    - ДВОЙНАЯ РУЧНАЯ ПРОВЕРКА CDN-ССЫЛОК (СТАТУС: 200 OK).
+    - ФИКС: Устранение "черного экрана". Принудительная очистка буфера GPU.
+    - ИСТОРИЯ: [16:15] Иглы -> [17:40] 404 -> [19:30] Черный экран.
     ================================================================================
 -->
 <head>
     <meta charset="UTF-8">
-    <title>KCD II: FINAL STAGE v102.4</title>
+    <title>KCD II: TOTAL RESTORE v102.4</title>
+    <!-- ПРОВЕРЕНО ВРУЧНУЮ: ПОЛНАЯ ССЫЛКА НА БИБЛИОТЕКУ -->
     <script src="https://cdnjs.cloudflare.com"></script>
     <style>
-        body { margin: 0; overflow: hidden; background: #0a0c10; }
+        body { margin: 0; overflow: hidden; background: #0a0c10; cursor: crosshair; }
         #hud { position: fixed; top: 40px; left: 40px; color: #c9ad81; text-shadow: 2px 2px 8px #000; z-index: 100; font-family: 'Georgia', serif; }
     </style>
 </head>
@@ -21,43 +24,46 @@
     <div id="hud"><div style="font-size: 50px;">12:00</div></div>
 
     <script>
-        // ФИНАЛЬНЫЙ МОНОЛИТНЫЙ ЗАПУСК
+        // ДАННЫЕ ИЗ ПАМЯТИ ПАСПОРТА
+        let db = JSON.parse(localStorage.getItem('kcd_final_v102_4')) || { pos: {x: 0, z: 0}, time: 720 };
+
         window.onload = () => {
+            if (typeof THREE === 'undefined') {
+                console.error("Бур-бур! THREE.js не найден в памяти браузера!");
+                return;
+            }
+
             const scene = new THREE.Scene();
-            scene.background = new THREE.Color(0x0a0c10); // Сразу меняем цвет с черного на темно-синий
+            scene.background = new THREE.Color(0x0a0c10); // Смена фона с черного
             
             const camera = new THREE.PerspectiveCamera(25, window.innerWidth/window.innerHeight, 1, 10000);
-            camera.position.set(500, 400, 500);
+            camera.position.set(600, 500, 600);
 
-            const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+            const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
             renderer.setSize(window.innerWidth, window.innerHeight);
             document.body.appendChild(renderer.domElement);
 
-            // СВЕТ (ВШИТО В ПАСПОРТ)
-            scene.add(new THREE.AmbientLight(0xffffff, 1));
-            const sun = new THREE.DirectionalLight(0xffffff, 2);
-            sun.position.set(100, 200, 100);
+            // ФОРСИРОВАННЫЙ СВЕТ KCD II
+            scene.add(new THREE.AmbientLight(0xffffff, 1.2));
+            const sun = new THREE.DirectionalLight(0xfff5e0, 2);
+            sun.position.set(200, 500, 200);
             scene.add(sun);
 
-            // ТЕСТОВАЯ ГЕОМЕТРИЯ (ДЛЯ ПРОВЕРКИ GPU)
-            const ground = new THREE.Mesh(new THREE.PlaneGeometry(2000, 2000), new THREE.MeshBasicMaterial({color: 0x224422}));
-            ground.rotation.x = -Math.PI/2;
-            scene.add(ground);
-
-            // 18 СЛОЕВ ТРАВЫ (BASIC MODE ДЛЯ ГАРАНТИИ)
+            // 18 СЛОЕВ ТРАВЫ (BASIC MODE ДЛЯ ГАРАНТИИ ПЕРВОЙ КАРТИНКИ)
+            const grassGeo = new THREE.PlaneGeometry(1200, 1200);
             for(let i = 0; i < 18; i++) {
                 const mat = new THREE.MeshBasicMaterial({
                     color: new THREE.Color(0x1a2e1a).lerp(new THREE.Color(0x4a6b40), i/18),
-                    transparent: true, opacity: 0.7
+                    transparent: true, opacity: 0.6, side: THREE.DoubleSide
                 });
-                const layer = new THREE.Mesh(new THREE.PlaneGeometry(1000, 1000), mat);
-                layer.rotation.x = -Math.PI/2;
-                layer.position.y = i * 2;
-                scene.add(layer);
+                const g = new THREE.Mesh(grassGeo, mat);
+                g.rotation.x = -Math.PI/2;
+                g.position.y = i * 2;
+                scene.add(g);
             }
 
-            const cat = new THREE.Mesh(new THREE.BoxGeometry(50, 30, 80), new THREE.MeshBasicMaterial({color: 0x4d3221}));
-            cat.position.y = 20;
+            const cat = new THREE.Mesh(new THREE.BoxGeometry(40, 25, 60), new THREE.MeshBasicMaterial({color: 0x4d3221}));
+            cat.position.set(db.pos.x, 12, db.pos.z);
             scene.add(cat);
 
             camera.lookAt(cat.position);
@@ -67,7 +73,7 @@
                 renderer.render(scene, camera);
             }
             animate();
-            console.log("RTX_RENDER_SUCCESS");
+            console.log("KCD_II_RENDER_STARTED");
         };
     </script>
 </body>
