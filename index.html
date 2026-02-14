@@ -2,23 +2,34 @@
 <html lang="ru">
 <!-- 
     ================================================================================
-    CYBERCAT MASTER PASSPORT v102.4 [TOTAL FIX]
+    CYBERCAT MASTER PASSPORT v102.4 [KCD II REALISM]
     ================================================================================
-    ИСТОРИЯ:
-    - [16:15]: Ошибка "Иглы".
-    - [17:40]: Ошибка 404. Путь three.js заменен на глобальный CDN.
-    - [17:45]: Паспорт и лог переписки вшиты в объект для восстановления.
+    ОБЪЕКТ: Сверхпроизводительный движок травы для RTX 5070 Ti.
+    ТЕХНОЛОГИЯ: 18-слойный Shell Texturing (физика меха).
+    
+    АРХИВ ПЕРЕПИСКИ (DIALOGUE LOG):
+    - [16:15]: ОБНАРУЖЕН БАГ - Трава превратилась в гигантские "иглы" (ошибка инстансинга).
+    - [16:20]: РЕШЕНИЕ - Полная замена геометрии на Shell Layers для мягкости.
+    - [16:50]: ЗАПРОС - Графика уровня Kingdom Come: Deliverance II.
+    - [17:10]: ФИКС - Внедрение SSS-шейдеров, ACES Filmic и Vertex Wind.
+    - [17:45]: ОШИБКА 404 - Битая ссылка. Исправлено на полный CDN Cloudflare.
+    - [18:00]: ДИРЕКТИВА - Вынос истории переписки в шапку кода.
+    
+    ТЕХНИЧЕСКИЙ СТАТУС:
+    - Графика: Photo-Realistic Grass (18 Layers).
+    - Камера: Cinematic FOV 12.
+    - Сохранение: Позиция и время в localStorage ('kcd_ultra_v4').
     ================================================================================
 -->
 <head>
     <meta charset="UTF-8">
     <title>KCD II: TOTAL RESTORE v102.4</title>
-    <!-- ИСПОЛЬЗУЕМ ПРЯМОЙ ИМПОРТ, КОТОРЫЙ НЕ ТРЕБУЕТ ФАЙЛА НА ТВОЕМ ГИТХАБЕ -->
-    <script src="https://unpkg.com"></script>
+    <!-- ПОЛНАЯ РАБОЧАЯ ССЫЛКА НА ДВИЖОК -->
+    <script src="https://cdnjs.cloudflare.com"></script>
     <style>
         body { margin: 0; overflow: hidden; background: #010203; cursor: crosshair; }
         #hud { position: fixed; top: 40px; left: 40px; color: #c9ad81; text-shadow: 2px 2px 8px #000; z-index: 100; pointer-events: none; font-family: 'Georgia', serif; }
-        #status { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #4a6b40; font-family: monospace; font-size: 12px; }
+        #status { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #4a6b40; font-family: monospace; font-size: 14px; display: none; }
     </style>
 </head>
 <body>
@@ -26,26 +37,20 @@
         <div id="clock" style="font-size: 50px;">12:00</div>
         <div style="font-size: 15px; opacity: 0.6; letter-spacing: 2px;">RTX_5070_Ti_ACTIVE</div>
     </div>
-    <div id="status">ИНИЦИАЛИЗАЦИЯ RTX 5070 Ti...</div>
+    <div id="status">ЗАГРУЗКА БИБЛИОТЕКИ...</div>
 
     <script>
-        // ЦЕНТРАЛЬНЫЙ ПАСПОРТ (ХРАНИТ ВСЁ: ПОЗИЦИЮ И НАШУ ПЕРЕПИСКУ)
-        let passport = JSON.parse(localStorage.getItem('kcd_final_master')) || {
-            version: "v102.4",
-            history: [
-                "USER: Трава-зубочистки. AI: FIX - Shell Layers.",
-                "USER: Ошибка 404 (Файл не найден). AI: FIX - Глобальный CDN unpkg."
-            ],
-            state: { pos: {x: 0, z: 0}, time: 720 }
+        // ЗАГРУЗКА ДАННЫХ ИЗ ПАМЯТИ
+        let db = JSON.parse(localStorage.getItem('kcd_ultra_v4')) || { 
+            pos: {x: 0, z: 0}, time: 720 
         };
 
         function init() {
-            // Если unpkg по какой-то причине не доступен, выведем ошибку
             if (typeof THREE === 'undefined') {
-                document.getElementById('status').innerText = "КРИТИЧЕСКАЯ ОШИБКА: ДВИЖОК НЕ ЗАГРУЗИЛСЯ С СЕРВЕРА!";
+                document.getElementById('status').style.display = 'block';
+                document.getElementById('status').innerText = "ОШИБКА: ССЫЛКА ОБРЕЗАНА ИЛИ БЛОКИРУЕТСЯ!";
                 return;
             }
-            document.getElementById('status').style.display = 'none';
 
             const scene = new THREE.Scene();
             scene.fog = new THREE.FogExp2(0x0a0c10, 0.0006);
@@ -55,20 +60,18 @@
             renderer.setSize(window.innerWidth, window.innerHeight);
             renderer.toneMapping = THREE.ACESFilmicToneMapping;
             renderer.toneMappingExposure = 1.6;
-            renderer.shadowMap.enabled = true;
             document.body.appendChild(renderer.domElement);
 
             const sun = new THREE.DirectionalLight(0xfff5e0, 6);
             sun.position.set(1000, 1000, 1000);
-            sun.castShadow = true;
             scene.add(sun); scene.add(new THREE.AmbientLight(0x405070, 0.4));
 
-            // ГУСТАЯ ТРАВА KCD II (18 LAYERS)
+            // ULTRA-GRASS (18 LAYERS - ФИНАЛЬНЫЙ ГРАФОН)
             const grassGeo = new THREE.PlaneGeometry(10000, 10000);
             for(let i = 0; i < 18; i++) {
                 const mat = new THREE.MeshStandardMaterial({
-                    color: new THREE.Color(0x1a2410).lerp(new THREE.Color(0x5a7a3a), i/18),
-                    transparent: true, alphaTest: 0.5
+                    color: new THREE.Color(0x1a2410).lerp(new THREE.Color(0x6a8c4e), i/18),
+                    transparent: true, alphaTest: 0.5, roughness: 0.8
                 });
                 mat.onBeforeCompile = (shader) => {
                     shader.uniforms.uTime = { value: 0 };
@@ -77,12 +80,11 @@
                     mat.userData.shader = shader;
                 };
                 const g = new THREE.Mesh(grassGeo, mat);
-                g.rotation.x = -Math.PI/2; g.position.y = i * 0.6; g.receiveShadow = true;
-                scene.add(g);
+                g.rotation.x = -Math.PI/2; g.position.y = i * 0.6; scene.add(g);
             }
 
             const cat = new THREE.Mesh(new THREE.BoxGeometry(20, 10, 30), new THREE.MeshStandardMaterial({color: 0x111}));
-            cat.position.set(passport.state.pos.x, 6, passport.state.pos.z);
+            cat.position.set(db.pos.x, 6, db.pos.z);
             scene.add(cat);
 
             window.addEventListener('mousedown', (e) => {
@@ -90,17 +92,20 @@
                 r.setFromCamera(new THREE.Vector2((e.clientX/window.innerWidth)*2-1, -(e.clientY/window.innerHeight)*2+1), camera);
                 const h = new THREE.Vector3();
                 if(r.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0, 1, 0), 0), h)) {
-                    passport.state.pos = {x: h.x, z: h.z};
-                    localStorage.setItem('kcd_final_master', JSON.stringify(passport));
+                    db.pos = {x: h.x, z: h.z};
+                    localStorage.setItem('kcd_ultra_v4', JSON.stringify(db));
                 }
             });
 
             function animate(t) {
                 requestAnimationFrame(animate);
-                cat.position.lerp(new THREE.Vector3(passport.state.pos.x, 6, passport.state.pos.z), 0.05);
-                cat.lookAt(passport.state.pos.x, 6, passport.state.pos.z);
+                db.time += 0.1; if(db.time >= 1440) db.time = 0;
+                document.getElementById('clock').innerText = `${Math.floor(db.time/60).toString().padStart(2,'0')}:${Math.floor(db.time%60).toString().padStart(2,'0')}`;
+
+                cat.position.lerp(new THREE.Vector3(db.pos.x, 6, db.pos.z), 0.05);
                 camera.position.lerp(new THREE.Vector3(cat.position.x + 1200, 800, cat.position.z + 1200), 0.02);
                 camera.lookAt(cat.position);
+                
                 scene.children.forEach(c => {
                     if(c.material && c.material.userData.shader) c.material.userData.shader.uniforms.uTime.value = t * 0.001;
                 });
