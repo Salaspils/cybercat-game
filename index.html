@@ -3,11 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <title>KCD II: ULTRA REALISM V102.4</title>
-    <script src="https://cdnjs.cloudflare.com"></script>
+    <!-- ИСПОЛЬЗУЕМ ПРЯМУЮ ССЫЛКУ, ЧТОБЫ ИЗБЕЖАТЬ 404 -->
+    <script src="https://unpkg.com"></script>
     <style>
-        body { margin: 0; overflow: hidden; background: #000; cursor: crosshair; }
-        #hud { position: fixed; top: 40px; left: 40px; color: #c9ad81; font-family: 'Serif'; text-transform: uppercase; letter-spacing: 3px; pointer-events: none; z-index: 10; }
-        #ui-btn { position: fixed; bottom: 50px; left: 50%; transform: translateX(-50%); background: #1a1a1a; color: #c9ad81; border: 1px solid #3d3d3d; padding: 20px 50px; cursor: pointer; font-family: 'Serif'; transition: 0.5s; }
+        body { margin: 0; overflow: hidden; background: #020406; cursor: crosshair; }
+        #hud { position: fixed; top: 40px; left: 40px; color: #c9ad81; font-family: 'Georgia', serif; text-transform: uppercase; letter-spacing: 3px; pointer-events: none; z-index: 10; }
+        #ui-btn { position: fixed; bottom: 50px; left: 50%; transform: translateX(-50%); background: #1a1a1a; color: #c9ad81; border: 1px solid #3d3d3d; padding: 20px 50px; cursor: pointer; font-family: 'Georgia'; transition: 0.5s; z-index: 20; }
         #ui-btn:hover { background: #c9ad81; color: #000; box-shadow: 0 0 50px rgba(201,173,129,0.4); }
     </style>
 </head>
@@ -16,78 +17,82 @@
         <div id="clock" style="font-size: 50px;">12:00</div>
         <div style="font-size: 15px; opacity: 0.7;">Гроши: <span id="bal">0</span></div>
     </div>
-    <button id="ui-btn" onclick="buildShed()">ВОЗВЕСТИ СРУБ</button>
+    <button id="ui-btn" onclick="buildShed()">ВОЗВЕСТИ СРУБ (300)</button>
 
     <script>
         let scene, camera, renderer, cat, sun, db;
-        db = JSON.parse(localStorage.getItem('kcd_final')) || { bal: 1000, builds: [], pos: {x:0, z:0}, time: 720 };
+        // Загрузка данных из памяти
+        db = JSON.parse(localStorage.getItem('kcd_final_v4')) || { bal: 1000, builds: [], pos: {x:0, z:0}, time: 720 };
 
         function init() {
-            scene = new THREE.Scene();
-            scene.fog = new THREE.FogExp2(0x12151a, 0.0009);
+            if (typeof THREE === 'undefined') {
+                alert("Ошибка: Библиотека Three.js не загружена! Проверь интернет.");
+                return;
+            }
 
-            camera = new THREE.PerspectiveCamera(12, window.innerWidth/window.innerHeight, 50, 20000);
+            scene = new THREE.Scene();
+            scene.fog = new THREE.FogExp2(0x0a0c10, 0.0008);
+
+            // КИНЕМАТОГРАФИЧЕСКАЯ КАМЕРА (KCD FOV)
+            camera = new THREE.PerspectiveCamera(18, window.innerWidth/window.innerHeight, 10, 20000);
+            
             renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
             renderer.setSize(window.innerWidth, window.innerHeight);
             renderer.toneMapping = THREE.ACESFilmicToneMapping;
-            renderer.toneMappingExposure = 1.8;
-            renderer.outputEncoding = THREE.sRGBEncoding;
+            renderer.toneMappingExposure = 1.5;
             renderer.shadowMap.enabled = true;
             renderer.shadowMap.type = THREE.PCFSoftShadowMap;
             document.body.appendChild(renderer.domElement);
 
-            // КИНЕМАТОГРАФИЧЕСКИЙ СВЕТ
-            sun = new THREE.DirectionalLight(0xffecd2, 6);
-            sun.position.set(1000, 800, 1000);
+            // РЕАЛИСТИЧНЫЙ СВЕТ
+            sun = new THREE.DirectionalLight(0xfff4e0, 5);
+            sun.position.set(1000, 1000, 1000);
             sun.castShadow = true;
-            sun.shadow.mapSize.set(4096, 4096);
-            sun.shadow.camera.left = sun.shadow.camera.bottom = -2000;
-            sun.shadow.camera.right = sun.shadow.camera.top = 2000;
+            sun.shadow.mapSize.set(2048, 2048);
             scene.add(sun);
             scene.add(new THREE.AmbientLight(0x405070, 0.4));
 
-            // SHELL GRASS V3 (PRO-GRADE)
-            const grassCount = 16;
-            const loader = new THREE.TextureLoader();
-            for(let i = 0; i < grassCount; i++) {
+            // SHELL GRASS (Многослойная трава KCD Style)
+            for(let i = 0; i < 15; i++) {
                 const mat = new THREE.MeshStandardMaterial({
-                    color: new THREE.Color(0x151d0a).lerp(new THREE.Color(0x4a6b40), i/grassCount),
-                    transparent: true, alphaTest: 0.6, roughness: 0.8, metalness: 0.0
+                    color: new THREE.Color(0x1a2410).lerp(new THREE.Color(0x5a7a3a), i/15),
+                    transparent: true, alphaTest: 0.5, roughness: 0.9
                 });
                 mat.onBeforeCompile = (shader) => {
                     shader.uniforms.uTime = { value: 0 };
                     shader.vertexShader = `uniform float uTime;\n` + shader.vertexShader.replace('#include <begin_vertex>', 
-                        `vec3 v = position; v.x += sin(uTime + position.x*0.1)*${(i*0.3).toFixed(2)}; vec3 transformed = v;`);
+                        `vec3 v = position; v.x += sin(uTime + position.x*0.05)*${(i*0.4).toFixed(2)}; vec3 transformed = v;`);
                     shader.fragmentShader = shader.fragmentShader.replace('#include <alphatest_fragment>', 
-                        `float n = fract(sin(dot(vUv.xy * (2500.0 + ${i}.0), vec2(12.9, 78.2))) * 437.5);
-                         if (n < ${0.2 + (i/grassCount) * 0.75}) discard;
+                        `float n = fract(sin(dot(vUv.xy * 2500.0, vec2(12.9, 78.2))) * 437.5);
+                         if (n < ${0.2 + (i/15) * 0.8}) discard;
                          #include <alphatest_fragment>`);
                     mat.userData.shader = shader;
                 };
                 const g = new THREE.Mesh(new THREE.PlaneGeometry(8000, 8000), mat);
-                g.rotation.x = -Math.PI/2; g.position.y = i * 0.5; g.receiveShadow = true;
+                g.rotation.x = -Math.PI/2; g.position.y = i * 0.6; g.receiveShadow = true;
                 scene.add(g);
             }
 
-            // ГРУНТ С ГЛУБИНОЙ
-            const ground = new THREE.Mesh(new THREE.PlaneGeometry(15000, 15000), new THREE.MeshStandardMaterial({color: 0x080705, roughness: 1}));
+            // ГРУНТ
+            const ground = new THREE.Mesh(new THREE.PlaneGeometry(15000, 15000), new THREE.MeshStandardMaterial({color: 0x050705}));
             ground.rotation.x = -Math.PI/2; ground.receiveShadow = true; scene.add(ground);
 
-            // КУБИЧЕСКИЙ ГЕРОЙ (CYBER-HENRY)
+            // ПЕРСОНАЖ (ИНДЖРИХ-КОТ)
             cat = new THREE.Group();
-            const b = new THREE.Mesh(new THREE.BoxGeometry(15, 10, 20), new THREE.MeshStandardMaterial({color: 0x2d1f18}));
-            b.castShadow = true; cat.add(b);
+            const body = new THREE.Mesh(new THREE.BoxGeometry(15, 10, 20), new THREE.MeshStandardMaterial({color: 0x3d2b1f}));
+            body.castShadow = true; cat.add(body);
             cat.position.set(db.pos.x, 10, db.pos.z);
             scene.add(cat);
 
             db.builds.forEach(p => renderShed(p.x, p.z));
+
             window.addEventListener('mousedown', (e) => {
                 if(e.target.id === 'ui-btn') return;
                 const r = new THREE.Raycaster();
                 r.setFromCamera(new THREE.Vector2((e.clientX/window.innerWidth)*2-1, -(e.clientY/window.innerHeight)*2+1), camera);
                 const h = new THREE.Vector3();
                 if(r.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0, 1, 0), 0), h)) {
-                    db.pos = {x: h.x, z: h.z}; localStorage.setItem('kcd_final', JSON.stringify(db));
+                    db.pos = {x: h.x, z: h.z}; localStorage.setItem('kcd_final_v4', JSON.stringify(db));
                 }
             });
             animate();
@@ -95,47 +100,47 @@
 
         function renderShed(x, z) {
             const s = new THREE.Group();
-            const logM = new THREE.MeshStandardMaterial({color: 0x2a1a0f, roughness: 0.9});
-            for(let i=0; i<15; i++) {
-                const l1 = new THREE.Mesh(new THREE.BoxGeometry(50, 5, 5), logM);
-                l1.position.set(0, i*5, (i%2==0)?22:-22); l1.castShadow = true; s.add(l1);
-                const l2 = new THREE.Mesh(new THREE.BoxGeometry(5, 5, 50), logM);
-                l2.position.set((i%2==0)?22:-22, i*5, 0); l2.castShadow = true; s.add(l2);
+            const m = new THREE.MeshStandardMaterial({color: 0x2a1a0f, roughness: 1});
+            for(let i=0; i<12; i++) {
+                const log = new THREE.Mesh(new THREE.BoxGeometry(50, 5, 5), m);
+                log.position.set(0, i*5, (i%2==0)?20:-20); log.castShadow = true; s.add(log);
+                const log2 = new THREE.Mesh(new THREE.BoxGeometry(5, 5, 50), m);
+                log2.position.set((i%2==0)?20:-20, i*5, 0); log2.castShadow = true; s.add(log2);
             }
-            const r = new THREE.Mesh(new THREE.ConeGeometry(40, 30, 4), new THREE.MeshStandardMaterial({color: 0x3d301d}));
-            r.position.y = 75; r.rotation.y = Math.PI/4; r.castShadow = true; s.add(r);
+            const roof = new THREE.Mesh(new THREE.ConeGeometry(40, 30, 4), new THREE.MeshStandardMaterial({color: 0x3d301d}));
+            roof.position.y = 70; roof.rotation.y = Math.PI/4; roof.castShadow = true; s.add(roof);
             s.position.set(x, 0, z); scene.add(s);
         }
 
         window.buildShed = () => {
             if(db.bal >= 300) {
-                db.bal -= 300; const p = {x: cat.position.x + 100, z: cat.position.z + 100};
+                db.bal -= 300; const p = {x: cat.position.x + 80, z: cat.position.z + 80};
                 db.builds.push(p); renderShed(p.x, p.z);
-                localStorage.setItem('kcd_final', JSON.stringify(db));
+                localStorage.setItem('kcd_final_v4', JSON.stringify(db));
             }
         };
 
         function animate() {
             requestAnimationFrame(animate);
             const time = Date.now() * 0.001;
-            db.time += 0.15; if(db.time >= 1440) db.time = 0;
+            db.time += 0.2; if(db.time >= 1440) db.time = 0;
             
             document.getElementById('clock').innerText = `${Math.floor(db.time/60).toString().padStart(2,'0')}:${Math.floor(db.time%60).toString().padStart(2,'0')}`;
             document.getElementById('bal').innerText = Math.floor(db.bal);
 
-            // Динамическое небо KCD II
+            // ДИНАМИЧЕСКИЙ СВЕТ KCD II
             const angle = (db.time / 1440) * Math.PI * 2 - Math.PI/2;
-            sun.position.set(Math.cos(angle)*2000, Math.sin(angle)*2000, 1000);
-            sun.intensity = Math.max(0, Math.sin(angle) * 8);
-            scene.fog.color.setHSL(0.05, 0.2, Math.max(0.05, Math.sin(angle) * 0.15));
+            sun.position.set(Math.cos(angle)*1500, Math.sin(angle)*1500, 1000);
+            sun.intensity = Math.max(0, Math.sin(angle) * 6);
+            scene.fog.color.setHSL(0.1, 0.2, Math.max(0.05, Math.sin(angle) * 0.1));
 
             scene.children.forEach(c => {
                 if(c.material && c.material.userData.shader) c.material.userData.shader.uniforms.uTime.value = time;
             });
 
-            cat.position.lerp(new THREE.Vector3(db.pos.x, 10, db.pos.z), 0.03);
+            cat.position.lerp(new THREE.Vector3(db.pos.x, 10, db.pos.z), 0.04);
             cat.lookAt(db.pos.x, 10, db.pos.z);
-            camera.position.lerp(new THREE.Vector3(cat.position.x + 1200, 700, cat.position.z + 1200), 0.015);
+            camera.position.lerp(new THREE.Vector3(cat.position.x + 1000, 600, cat.position.z + 1000), 0.02);
             camera.lookAt(cat.position);
             renderer.render(scene, camera);
         }
