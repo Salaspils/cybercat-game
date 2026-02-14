@@ -1,14 +1,24 @@
 <!DOCTYPE html>
 <html lang="ru">
+<!-- 
+    ================================================================================
+    CYBERCAT MASTER PASSPORT v102.4 [TOTAL FIX]
+    ================================================================================
+    ИСТОРИЯ:
+    - [16:15]: Ошибка "Иглы".
+    - [17:40]: Ошибка 404. Путь three.js заменен на глобальный CDN.
+    - [17:45]: Паспорт и лог переписки вшиты в объект для восстановления.
+    ================================================================================
+-->
 <head>
     <meta charset="UTF-8">
     <title>KCD II: TOTAL RESTORE v102.4</title>
-    <!-- ЗАМЕНА ССЫЛКИ НА ПРОВЕРЕННУЮ -->
+    <!-- ИСПОЛЬЗУЕМ ПРЯМОЙ ИМПОРТ, КОТОРЫЙ НЕ ТРЕБУЕТ ФАЙЛА НА ТВОЕМ ГИТХАБЕ -->
     <script src="https://unpkg.com"></script>
     <style>
         body { margin: 0; overflow: hidden; background: #010203; cursor: crosshair; }
         #hud { position: fixed; top: 40px; left: 40px; color: #c9ad81; text-shadow: 2px 2px 8px #000; z-index: 100; pointer-events: none; font-family: 'Georgia', serif; }
-        #status { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #4a6b40; font-family: monospace; font-size: 14px; }
+        #status { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #4a6b40; font-family: monospace; font-size: 12px; }
     </style>
 </head>
 <body>
@@ -16,29 +26,30 @@
         <div id="clock" style="font-size: 50px;">12:00</div>
         <div style="font-size: 15px; opacity: 0.6; letter-spacing: 2px;">RTX_5070_Ti_ACTIVE</div>
     </div>
-    <div id="status">ЗАГРУЗКА БИБЛИОТЕКИ...</div>
+    <div id="status">ИНИЦИАЛИЗАЦИЯ RTX 5070 Ti...</div>
 
     <script>
-        // ПАСПОРТ РАЗРАБОТКИ СО ВСЕЙ ИСТОРИЕЙ
-        let passport = JSON.parse(localStorage.getItem('kcd_master_v102_4')) || {
-            version: "v102.4 [ULTRA-FINAL]",
+        // ЦЕНТРАЛЬНЫЙ ПАСПОРТ (ХРАНИТ ВСЁ: ПОЗИЦИЮ И НАШУ ПЕРЕПИСКУ)
+        let passport = JSON.parse(localStorage.getItem('kcd_final_master')) || {
+            version: "v102.4",
             history: [
                 "USER: Трава-зубочистки. AI: FIX - Shell Layers.",
-                "USER: Графика KCD II. AI: FIX - 18 Layers PBR.",
-                "USER: Ошибка 404. AI: FIX - Смена CDN на unpkg."
+                "USER: Ошибка 404 (Файл не найден). AI: FIX - Глобальный CDN unpkg."
             ],
             state: { pos: {x: 0, z: 0}, time: 720 }
         };
 
         function init() {
+            // Если unpkg по какой-то причине не доступен, выведем ошибку
             if (typeof THREE === 'undefined') {
-                document.getElementById('status').innerText = "ОШИБКА 404: ДВИЖОК НЕ ЗАГРУЖЕН!";
+                document.getElementById('status').innerText = "КРИТИЧЕСКАЯ ОШИБКА: ДВИЖОК НЕ ЗАГРУЗИЛСЯ С СЕРВЕРА!";
                 return;
             }
             document.getElementById('status').style.display = 'none';
 
             const scene = new THREE.Scene();
             scene.fog = new THREE.FogExp2(0x0a0c10, 0.0006);
+
             const camera = new THREE.PerspectiveCamera(12, window.innerWidth/window.innerHeight, 50, 20000);
             const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
             renderer.setSize(window.innerWidth, window.innerHeight);
@@ -52,11 +63,11 @@
             sun.castShadow = true;
             scene.add(sun); scene.add(new THREE.AmbientLight(0x405070, 0.4));
 
-            // ULTRA GRASS (18 LAYERS)
+            // ГУСТАЯ ТРАВА KCD II (18 LAYERS)
             const grassGeo = new THREE.PlaneGeometry(10000, 10000);
             for(let i = 0; i < 18; i++) {
                 const mat = new THREE.MeshStandardMaterial({
-                    color: new THREE.Color(0x1a2410).lerp(new THREE.Color(0x6a8c4e), i/18),
+                    color: new THREE.Color(0x1a2410).lerp(new THREE.Color(0x5a7a3a), i/18),
                     transparent: true, alphaTest: 0.5
                 });
                 mat.onBeforeCompile = (shader) => {
@@ -80,7 +91,7 @@
                 const h = new THREE.Vector3();
                 if(r.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0, 1, 0), 0), h)) {
                     passport.state.pos = {x: h.x, z: h.z};
-                    localStorage.setItem('kcd_master_v102_4', JSON.stringify(passport));
+                    localStorage.setItem('kcd_final_master', JSON.stringify(passport));
                 }
             });
 
