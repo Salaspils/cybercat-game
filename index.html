@@ -2,7 +2,7 @@
 <html lang="ru">
 <!-- 
     ================================================================================
-    CYBERCAT MASTER PASSPORT v100.2 (STRICT CONTEXT LOCK)
+    CYBERCAT MASTER PASSPORT v100.2 [LOCAL STABLE]
     ================================================================================
     !!! МАНДАТ AI: ПЕРЕЧИТЫВАТЬ ЭТОТ ХЕДЕР ПЕРЕД КАЖДЫМ ОТВЕТОМ !!!
     !!! ЗАПРЕЩЕНО ИГНОРИРОВАТЬ ИСТОРИЮ ИЗМЕНЕНИЙ !!!
@@ -11,11 +11,11 @@
     URL: https://salaspils.github.io
     
     АРХИВ РАЗРАБОТКИ (FULL LOG):
-    - [v100.0]: ПОЛНЫЙ ПЕРЕЗАПУСК. Чистая архитектура AAA. 
+    - [v100.0]: ПОЛНЫЙ ПЕРЕЗАПУСК. Чистая архитектура AAA.
     - [v100.0]: FIX - Навигация (Plane Projection Mode).
     - [v100.1]: CRITICAL - Синхронизация времени (1ч = 5мин) через Date.now().
     - [v100.2]: CORE - Внедрена "Блокировка амнезии" для AI. 
-    - [v100.2]: FIX - Стабильный баланс $MEOW и авто-сохранение срубов.
+    - [v100.2]: FIX - Стабильный баланс $MEOW и использование ЛОКАЛЬНОГО three.min.js.
     
     ДИРЕКТИВА: Ведение за ручку. Сохранение контекста до 1 Гб. 
     AI ОБЯЗАН: Использовать только этот код как фундамент.
@@ -23,8 +23,9 @@
 -->
 <head>
     <meta charset="UTF-8">
-    <title>CyberCat v100.2: Persistent Memory</title>
-    <script src="https://cdnjs.cloudflare.com"></script>
+    <title>CyberCat v100.2: Local Stable</title>
+    <!-- Используем твой локальный файл, как на скриншоте -->
+    <script src="three.min.js"></script>
     <style>
         body { margin: 0; overflow: hidden; background: #010103; font-family: 'Segoe UI', sans-serif; }
         #ui { position: fixed; top: 20px; left: 20px; z-index: 100; pointer-events: none; }
@@ -43,12 +44,11 @@
     </div>
 
     <script>
-        // Инициализация базы данных v100.2
         let db = JSON.parse(localStorage.getItem('cyber_v100_2')) || { bal: 1000, builds: [], pos: {x: 0, z: 0}, time: 480 };
         const save = () => { localStorage.setItem('cyber_v100_2', JSON.stringify(db)); document.getElementById('bal').innerText = Math.floor(db.bal); };
-        window.resetGame = () => { if(confirm("ВНИМАНИЕ: Снести мир и начать с нуля?")) { localStorage.clear(); location.reload(); } };
+        window.resetGame = () => { if(confirm("Сбросить мир v100.2?")) { localStorage.clear(); location.reload(); } };
 
-        let scene, camera, renderer, cat, targetPos, grassMat, spotlight, lastRealTime = Date.now(), zoom = 150, CLOCK = new THREE.Clock();
+        let scene, camera, renderer, cat, targetPos, spotlight, lastRealTime = Date.now(), zoom = 150, CLOCK = new THREE.Clock();
 
         function init() {
             scene = new THREE.Scene(); scene.background = new THREE.Color(0x010103); scene.fog = new THREE.FogExp2(0x010103, 0.002);
@@ -58,13 +58,12 @@
             document.body.appendChild(renderer.domElement);
 
             scene.add(new THREE.HemisphereLight(0x00ffcc, 0x010105, 0.6));
-            spotlight = new THREE.SpotLight(0xffffff, 4); spotlight.position.set(0, 200, 0); spotlight.castShadow = true;
-            spotlight.angle = 0.5; spotlight.penumbra = 0.5; scene.add(spotlight);
+            spotlight = new THREE.SpotLight(0xffffff, 4); spotlight.position.set(0, 300, 0); spotlight.castShadow = true;
+            spotlight.target = new THREE.Object3D(); scene.add(spotlight.target); scene.add(spotlight);
 
             const ground = new THREE.Mesh(new THREE.PlaneGeometry(10000, 10000), new THREE.MeshStandardMaterial({ color: 0x050505 }));
             ground.rotation.x = -Math.PI/2; ground.receiveShadow = true; scene.add(ground);
 
-            // FOREST & GRASS
             for(let i=0; i<150; i++) renderTree((Math.random()-0.5)*3500, (Math.random()-0.5)*3500);
 
             cat = new THREE.Group();
@@ -72,17 +71,17 @@
             body.rotation.z = Math.PI/2; body.position.y = 1.5; body.castShadow = true; cat.add(body);
             cat.position.set(db.pos.x, 0, db.pos.z); scene.add(cat);
             targetPos = new THREE.Vector3(db.pos.x, 0, db.pos.z);
-            spotlight.target = cat;
 
             db.builds.forEach(p => renderShed(p.x, p.z));
 
-            const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
             window.addEventListener('pointerdown', (e) => {
                 if(e.target.tagName === 'BUTTON') return;
                 const m = new THREE.Vector2((e.clientX/window.innerWidth)*2-1, -(e.clientY/window.innerHeight)*2+1);
                 const ray = new THREE.Raycaster(); ray.setFromCamera(m, camera);
                 const hit = new THREE.Vector3();
-                if (ray.ray.intersectPlane(plane, hit)) { targetPos.copy(hit); db.pos = {x: hit.x, z: hit.z}; save(); }
+                if (ray.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0,1,0),0), hit)) { 
+                    targetPos.copy(hit); db.pos = {x: hit.x, z: hit.z}; save(); 
+                }
             });
             save(); animate();
         }
@@ -100,20 +99,12 @@
             const s = new THREE.Group();
             for(let i=0; i<10; i++) {
                 const log = new THREE.Mesh(new THREE.BoxGeometry(15, 1.5, 1.5), new THREE.MeshStandardMaterial({color: 0x2d1b0f}));
-                log.position.y = i * 1.4; log.rotation.y = (i % 2 === 0) ? 0 : Math.PI/2;
-                log.castShadow = true; s.add(log);
+                log.position.y = i * 1.4; log.rotation.y = (i % 2 === 0) ? 0 : Math.PI/2; log.castShadow = true; s.add(log);
             }
             s.position.set(x, 0, z); scene.add(s);
         }
 
-        window.buildShed = () => { 
-            if(db.bal >= 900) { 
-                db.bal -= 900; 
-                renderShed(cat.position.x, cat.position.z); 
-                db.builds.push({x: cat.position.x, z: cat.position.z}); 
-                save(); 
-            } 
-        };
+        window.buildShed = () => { if(db.bal >= 900) { db.bal -= 900; renderShed(cat.position.x, cat.position.z); db.builds.push({x: cat.position.x, z: cat.position.z}); save(); } };
 
         function animate() {
             requestAnimationFrame(animate);
@@ -121,29 +112,24 @@
             const deltaMs = now - lastRealTime;
             lastRealTime = now;
 
-            // ХОД ВРЕМЕНИ ПО ПАСПОРТУ: 1 игровой час = 5 минут реала
+            // Время строго по паспорту
             db.time += deltaMs * 0.012; 
             if(db.time >= 1440) db.time = 0;
             const h = Math.floor(db.time / 60), m = Math.floor(db.time % 60);
             document.getElementById('clock').innerText = `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}`;
 
-            // ДВИЖЕНИЕ И МАЙНИНГ $MEOW
             const dt = Math.min(CLOCK.getDelta(), 0.1);
             if(cat.position.distanceTo(targetPos) > 0.5) {
                 cat.position.lerp(targetPos, 0.05);
                 cat.lookAt(targetPos.x, 0, targetPos.z);
-                db.bal += dt * 10; save(); // Начисление за активность
+                db.bal += dt * 10; save();
             }
 
-            // КАМЕРА И ДИНАМИЧЕСКИЙ СВЕТ
             camera.position.lerp(new THREE.Vector3(cat.position.x, zoom, cat.position.z + zoom), 0.05);
             camera.lookAt(cat.position);
-            spotlight.position.set(cat.position.x, 200, cat.position.z);
+            spotlight.position.set(cat.position.x, 300, cat.position.z);
+            spotlight.target.position.copy(cat.position);
             
-            // Цикл освещения: ночью прожектор ярче
-            const nightCycle = Math.sin((db.time / 1440) * Math.PI);
-            spotlight.intensity = 4 * (1 - nightCycle + 0.2);
-
             renderer.render(scene, camera);
         }
         window.onload = init;
