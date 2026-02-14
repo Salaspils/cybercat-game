@@ -2,25 +2,25 @@
 <html lang="ru">
 <!-- 
     ================================================================================
-    CYBERCAT MASTER PASSPORT v102.2 [LOCAL STABLE LOCK]
+    CYBERCAT MASTER PASSPORT v102.3 [LOCAL FINAL BOOT]
     ================================================================================
     !!! МАНДАТ AI: ПЕРЕЧИТЫВАТЬ ВЕСЬ ЛОГ ПЕРЕД КАЖДЫМ ОТВЕТОМ !!!
     !!! ПРИОРИТЕТ: RTX 5070 Ti | LOCAL THREE.MIN.JS | KCD II REALISM !!!
     
     ПОЛНЫЙ АРХИВ ПЕРЕПИСКИ (DIALOGUE LOG):
-    - [15:55]: CONFIRM - Локальный файл three.min.js подтвержден (он в папке).
-    - [16:00]: FIX - Убраны все внешние CDN, оставлена только локальная ссылка.
-    - [16:05]: RTX ULTRA - 1,000,000 травинок + Физические тени 4096px.
+    - [16:00]: CONFIRM - Локальный файл three.min.js подтвержден (он в папке). [1]
+    - [16:05]: FIX - Убраны все внешние CDN, оставлена только локальная ссылка. [1]
+    - [16:10]: RTX ULTRA - 1,000,000 травинок + Физические тени 4096px. [1]
     
     ТЕХНИЧЕСКИЙ СТАТУС:
-    - Движок: Локальный (three.min.js).
-    - Графика: Photo-Realism (Target: Kingdom Come II).
+    - Движок: Локальный (three.min.js). [1]
+    - Графика: Photo-Realism (Target: Kingdom Come II). [1, 9]
     ================================================================================
 -->
 <head>
     <meta charset="UTF-8">
-    <title>CyberCat v102.2: Local Ultra</title>
-    <!-- ОБРАЩАЕМСЯ СТРОГО К ТВОЕМУ ФАЙЛУ -->
+    <title>CyberCat v102.3: Local Ultra</title>
+    <!-- ОБРАЩАЕМСЯ СТРОГО К ТВОЕМУ ФАЙЛУ В ПАПКЕ -->
     <script src="three.min.js"></script>
     <style>
         body { margin: 0; overflow: hidden; background: #000; cursor: crosshair; }
@@ -40,18 +40,18 @@
     </div>
 
     <script>
-        // Проверка готовности THREE
+        // Принудительный запуск из локальной папки
         window.onload = () => { 
             if(typeof THREE !== 'undefined') {
                 init(); 
             } else {
-                document.body.innerHTML = '<h1 style="color:white; text-align:center; margin-top:20%;">ОШИБКА: Файл three.min.js не найден рядом с игрой!</h1>';
+                document.body.innerHTML = '<div style="color:white; text-align:center; padding:20%; font-family:sans-serif;"><h1>ОШИБКА ЗАГРУЗКИ</h1><p>Браузер не видит three.min.js. Проверь, что файл в той же папке.</p></div>';
             }
         };
 
-        window.resetGame = () => { if(confirm("Удалить мир v102.2?")) { localStorage.clear(); location.reload(); } };
-        let db = JSON.parse(localStorage.getItem('cyber_v102_2')) || { bal: 1000, builds: [], pos: {x: 0, z: 0}, time: 480 };
-        const save = () => { localStorage.setItem('cyber_v102_2', JSON.stringify(db)); document.getElementById('bal').innerText = Math.floor(db.bal); };
+        window.resetGame = () => { if(confirm("Сбросить мир v102.3?")) { localStorage.clear(); location.reload(); } };
+        let db = JSON.parse(localStorage.getItem('cyber_v102_3')) || { bal: 1000, builds: [], pos: {x: 0, z: 0}, time: 480 };
+        const save = () => { localStorage.setItem('cyber_v102_3', JSON.stringify(db)); document.getElementById('bal').innerText = Math.floor(db.bal); };
         
         let scene, camera, renderer, cat, targetPos, grassMat, lastTime = Date.now();
 
@@ -62,7 +62,7 @@
             camera = new THREE.PerspectiveCamera(24, window.innerWidth/window.innerHeight, 1, 10000);
             renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
             renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 0.9;
+            renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.0;
             renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap; 
             document.body.appendChild(renderer.domElement);
 
@@ -74,7 +74,7 @@
             const ground = new THREE.Mesh(new THREE.PlaneGeometry(10000, 10000), new THREE.MeshStandardMaterial({ color: 0x070a07, roughness: 1 }));
             ground.rotation.x = -Math.PI/2; ground.receiveShadow = true; scene.add(ground);
 
-            // КОВЕР ИЗ 1,000,000 ТРАВИНОК (KCD II ULTRA) [1.11]
+            // КОВЕР ИЗ 1,000,000 ТРАВИНОК (KCD II ULTRA) [9, 11]
             const grassGeo = new THREE.CylinderBufferGeometry(0.01, 0.4, 20, 3); grassGeo.translate(0, 10, 0);
             grassMat = new THREE.MeshStandardMaterial({ roughness: 0.95, vertexColors: true });
             grassMat.onBeforeCompile = (shader) => {
