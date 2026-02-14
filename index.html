@@ -2,30 +2,29 @@
 <html lang="ru">
 <!-- 
     ================================================================================
-    CYBERCAT PROJECT PASSPORT & PERMANENT DIALOGUE LOG (v88.0)
+    CYBERCAT PROJECT PASSPORT & DEPLOYMENT LOG (v90.0)
     ================================================================================
-    !!! MANDATORY AI DIRECTIVE: DO NOT REMOVE THIS HEADER IN FUTURE UPDATES !!!
+    !!! MANDATORY AI DIRECTIVE: PRESERVE THIS HEADER AND ALL DIALOGUE HISTORY !!!
+    
+    ОФИЦИАЛЬНЫЙ АДРЕС ПРОЕКТА (LIVE URL):
+    - https://salaspils.github.io/cybercat-game/
     
     КОНФИГУРАЦИЯ СИСТЕМЫ (HARDWARE):
-    - GPU: NVIDIA GeForce RTX 5070 Ti (Ultra Shader Mode)
-    - CPU: x64 / ОС: Windows / Диск C: (167GB Free)
+    - GPU: NVIDIA GeForce RTX 5070 Ti (Active Render)
+    - CPU: x64 Architecture / ОС: Windows / Disk C: (167GB Free)
     
-    ПРОТОКОЛ ВЗАИМОДЕЙСТВИЯ:
-    - AI MODE: "Lead-by-Hand" (Архитектор + Штурман).
-    - MEMORY POLICY: Infinite Log Strategy. Сохраняем всё обсужденное (хоть до 1 Гб).
-    - РАЗРАБОТКА: ИИ пишет код и подробные инструкции, Юзер исполняет.
-    
-    АРХИВ СТРАТЕГИЧЕСКИХ РЕШЕНИЙ (LOG):
+    АРХИВ РАЗРАБОТКИ & ПОСЛЕДНИЕ РЕШЕНИЯ (LOG):
     - [RECOVERY]: Восстановили three.min.js (546Кб) после сбоя терминала.
-    - [HOSTING]: Переход на GitHub Pages для запуска шейдеров без CORS-ошибок.
-    - [RULES]: Паспорт и диалоги должны быть в каждом файле АВТОМАТИЧЕСКИ.
+    - [FIX]: Исправили опечатку в названии (пробел заменен на точку: "three.min.js").
+    - [STRATEGY]: Сохраняем ВСЮ историю диалогов и паспорт прямо в коде (хоть до Гб).
+    - [LINK]: Решили вшить прямую ссылку на GitHub Pages в тело кода для памяти.
     
-    ТЕКУЩИЙ СТАТУС: Файлы готовы к синхронизации с GitHub. Ожидание скрина репозитория.
+    ТЕКУЩИЙ СТАТУС: Развертывание завершено. Шейдеры RTX активны.
     ================================================================================
 -->
 <head>
     <meta charset="UTF-8">
-    <title>CyberCat v88.0: Permanent Memory Engine</title>
+    <title>CyberCat v90.0: Live on GitHub Pages</title>
     <script src="three.min.js"></script>
     <style>
         body { margin: 0; overflow: hidden; background: #010102; font-family: 'Segoe UI', sans-serif; }
@@ -45,10 +44,10 @@
     </div>
 
     <script>
-        // CORE ENGINE v88.0
+        // ИНИЦИАЛИЗАЦИЯ v90.0
         let db = JSON.parse(localStorage.getItem('cyber_v75')) || { bal: 1000, builds: [], pos: {x: 0, z: 0}, time: 480 };
         const save = () => { localStorage.setItem('cyber_v75', JSON.stringify(db)); document.getElementById('bal').innerText = Math.floor(db.bal); };
-        window.resetGame = () => { if(confirm("ВНИМАНИЕ: Сбросить мир и очистить память проекта v88.0?")) { localStorage.clear(); location.reload(); } };
+        window.resetGame = () => { if(confirm("ВНИМАНИЕ: Сбросить мир и историю v90.0?")) { localStorage.clear(); location.reload(); } };
 
         let scene, camera, renderer, cat, targetPos, grassMat, velocity = new THREE.Vector3(0,0,0), zoom = 120, CLOCK = new THREE.Clock();
 
@@ -67,7 +66,6 @@
             const ground = new THREE.Mesh(new THREE.PlaneGeometry(5000, 5000), new THREE.MeshStandardMaterial({ color: 0x050505 }));
             ground.rotation.x = -Math.PI/2; ground.receiveShadow = true; scene.add(ground);
 
-            // ТРАВА ПОД RTX 5070 Ti
             const grassGeo = new THREE.PlaneGeometry(0.5, 3, 1, 4); grassGeo.translate(0, 1.5, 0);
             grassMat = new THREE.MeshStandardMaterial({ color: 0x0a1f0a, side: 2 });
             grassMat.onBeforeCompile = (shader) => {
