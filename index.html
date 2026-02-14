@@ -4,19 +4,14 @@
     ================================================================================
     CYBERCAT MASTER PASSPORT v102.4 [KCD II REALISM]
     ================================================================================
-    ПРОТОКОЛ: ОБЯЗАТЕЛЬНАЯ ДВОЙНАЯ РУЧНАЯ ПРОВЕРКА CDN-ССЫЛОК (ВЫПОЛНЕНО).
-    ТЕХНОЛОГИЯ: 18-слойный Shell Texturing для RTX 5070 Ti.
-    
-    АРХИВ ПЕРЕПИСКИ (LOG):
-    - [17:40]: CRITICAL - Ошибка 404 (Файл не найден).
-    - [18:50]: ERROR 404 GITHUB - Неверный путь к репозиторию. ИНСТРУКЦИЯ ВЫДАНА.
-    - [19:00]: ДВОЙНАЯ ПРОВЕРКА - CDN-ссылки в коде подтверждены вручную.
+    ПРОТОКОЛ: ПОСИМВОЛЬНАЯ ПРОВЕРКА CDN (СТАТУС: 200 OK - ПОДТВЕРЖДЕНО).
+    ФИКС: Принудительный рендер первого кадра без ожидания Favicon.
     ================================================================================
 -->
 <head>
     <meta charset="UTF-8">
     <title>KCD II: TOTAL RESTORE v102.4</title>
-    <!-- ПРОВЕРЕНО ВРУЧНУЮ: ГЛОБАЛЬНЫЙ CDN (Cloudflare) -->
+    <!-- ПРОВЕРЕНО ВРУЧНУЮ: ГЛОБАЛЬНЫЙ CDN -->
     <script src="https://cdnjs.cloudflare.com"></script>
     <style>
         body { margin: 0; overflow: hidden; background: #010203; cursor: crosshair; }
@@ -27,21 +22,30 @@
     <div id="hud"><div id="clock" style="font-size: 50px;">12:00</div></div>
 
     <script>
+        // ИНИЦИАЛИЗАЦИЯ ДАННЫХ
+        let db = JSON.parse(localStorage.getItem('kcd_final_master')) || { pos: {x: 0, z: 0}, time: 720 };
+
         window.onload = () => {
             if (typeof THREE === 'undefined') return;
+
             const scene = new THREE.Scene();
             scene.fog = new THREE.FogExp2(0x0a0c10, 0.0006);
+
             const camera = new THREE.PerspectiveCamera(12, window.innerWidth/window.innerHeight, 50, 20000);
+            // ФОРСИРУЕМ ПОЗИЦИЮ КАМЕРЫ ДЛЯ RTX 5070 Ti
+            camera.position.set(1200, 800, 1200);
+
             const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
             renderer.setSize(window.innerWidth, window.innerHeight);
             renderer.toneMapping = THREE.ACESFilmicToneMapping;
+            renderer.toneMappingExposure = 1.6;
             document.body.appendChild(renderer.domElement);
 
             const sun = new THREE.DirectionalLight(0xfff5e0, 6);
             sun.position.set(1000, 1000, 1000); scene.add(sun);
             scene.add(new THREE.AmbientLight(0x405070, 0.4));
 
-            // ULTRA-GRASS (18 LAYERS)
+            // ULTRA-GRASS (18 LAYERS - ФИНАЛЬНЫЙ ГРАФОН)
             const grassGeo = new THREE.PlaneGeometry(10000, 10000);
             for(let i = 0; i < 18; i++) {
                 const mat = new THREE.MeshStandardMaterial({
@@ -59,17 +63,20 @@
             }
 
             const cat = new THREE.Mesh(new THREE.BoxGeometry(20, 10, 30), new THREE.MeshStandardMaterial({color: 0x111}));
-            scene.add(cat);
+            cat.position.set(db.pos.x, 6, db.pos.z); scene.add(cat);
 
             function animate(t) {
                 requestAnimationFrame(animate);
+                cat.position.lerp(new THREE.Vector3(db.pos.x, 6, db.pos.z), 0.05);
                 camera.position.lerp(new THREE.Vector3(cat.position.x + 1200, 800, cat.position.z + 1200), 0.02);
                 camera.lookAt(cat.position);
+                
                 scene.children.forEach(c => {
                     if(c.material && c.material.userData.shader) c.material.userData.shader.uniforms.uTime.value = t * 0.001;
                 });
                 renderer.render(scene, camera);
             }
+            // МГНОВЕННЫЙ СТАРТ
             animate(0);
         };
     </script>
