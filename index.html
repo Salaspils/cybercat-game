@@ -2,54 +2,61 @@
 <html lang="ru">
 <!-- 
     ================================================================================
-    CYBERCAT MASTER PASSPORT v102.4 [KCD II REALISM - AUTONOMOUS]
+    CYBERCAT MASTER PASSPORT v102.4 [KCD II - THE FINAL TRY]
     ================================================================================
-    СТАТУС: ТЬМА ПРОБИТА. ТЕКУЩАЯ ЦЕЛЬ: УСТРАНЕНИЕ "ЗЕЛЕНОГО МЫЛА".
-    ТЕХНОЛОГИЯ: Процедурный шум Perlin (имитация травинок без текстур).
-    ДИРЕКТИВА: Двойная ручная проверка каждой строки шейдера.
+    СТАТУС: УСТРАНЕНИЕ "ЭФФЕКТА 90-х".
+    ДИРЕКТИВА: Внедрение PBR-цветокоррекции и микро-теней в автономный код.
     ================================================================================
 -->
 <head>
     <meta charset="UTF-8">
-    <title>KCD II: TRUE GRASS v102.4</title>
+    <title>KCD II: TRUE REALISM v102.4</title>
     <style>
-        body { margin: 0; overflow: hidden; background: #010203; }
-        #hud { position: fixed; top: 40px; left: 40px; color: #c9ad81; text-shadow: 2px 2px 8px #000; z-index: 100; pointer-events: none; font-family: 'Georgia', serif; }
-        canvas { width: 100vw; height: 100vh; display: block; }
+        body { margin: 0; overflow: hidden; background: #05070a; }
+        #hud { position: fixed; top: 40px; left: 40px; color: #d4a373; text-shadow: 0 2px 10px #000; z-index: 100; font-family: 'Georgia', serif; }
+        canvas { width: 100vw; height: 100vh; display: block; filter: contrast(1.1) saturate(0.8); }
     </style>
 </head>
 <body>
-    <div id="hud"><div style="font-size: 50px;">12:00</div></div>
+    <div id="hud"><div style="font-size: 50px;">12:00</div><div style="opacity:0.5; font-size: 12px;">RTX 5070 Ti // ULTRA MODE</div></div>
     <canvas id="glCanvas"></canvas>
 
     <script>
         const canvas = document.querySelector("#glCanvas");
         const gl = canvas.getContext("webgl");
 
-        // ШЕЙДЕРЫ С ПРОЦЕДУРНОЙ ТРАВОЙ (БЕЗ ВНЕШНИХ ТЕКСТУР)
         const vs = `
             attribute vec4 aPos;
             uniform mat4 uM, uP;
             uniform float uT;
-            varying lowp vec4 vC;
             varying highp vec2 vUv;
+            varying float vZ;
             void main() {
-                float w = sin(uT * 2.0 + aPos.x * 5.0) * aPos.z * 0.1;
-                gl_Position = uP * uM * vec4(aPos.x + w, aPos.y, aPos.z, 1.0);
-                vUv = aPos.xy * 10.0;
-                vC = vec4(0.05, 0.15 + aPos.z * 0.5, 0.05, 1.0 - aPos.z);
+                // Ветер с разной частотой для слоев
+                float wind = sin(uT * 1.5 + aPos.x * 2.0) * aPos.z * 0.15;
+                gl_Position = uP * uM * vec4(aPos.x + wind, aPos.y, aPos.z, 1.0);
+                vUv = aPos.xy * 15.0; // Плотность травы
+                vZ = aPos.z;
             }
         `;
 
         const fs = `
             precision highp float;
-            varying lowp vec4 vC;
             varying highp vec2 vUv;
-            float hash(vec2 p) { return fract(sin(dot(p, vec2(12.7, 7.8))) * 437.5); }
+            varying float vZ;
+            float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
             void main() {
                 float n = hash(vUv);
-                if (n < 0.3) discard; // Создаем дырки - "травинки"
-                gl_FragColor = vC * n;
+                if (n < 0.2 + vZ * 0.6) discard; // Динамическая густота
+                
+                // Цвет Богемии: от темной земли к сухой траве
+                vec3 bottomColor = vec3(0.05, 0.08, 0.05);
+                vec3 topColor = vec3(0.35, 0.45, 0.2);
+                vec3 color = mix(bottomColor, topColor, vZ);
+                
+                // Имитация теней и зернистости
+                color *= (0.8 + n * 0.4); 
+                gl_FragColor = vec4(color, 1.0 - vZ * 1.2);
             }
         `;
 
@@ -66,23 +73,23 @@
 
         const buf = gl.createBuffer();
         gl.bindBuffer(gl.ARRAY_BUFFER, buf);
-        
         let v = [];
-        for(let i=0; i<18; i++) {
-            let z = i * 0.05;
-            v.push(-2,-2,z, 2,-2,z, -2,2,z, -2,2,z, 2,-2,z, 2,2,z);
+        for(let i=0; i<24; i++) { // Увеличил до 24 слоев для плотности
+            let z = i * 0.04;
+            v.push(-3,-3,z, 3,-3,z, -3,3,z, -3,3,z, 3,-3,z, 3,3,z);
         }
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(v), gl.STATIC_DRAW);
 
         function render(time) {
-            gl.clearColor(0.02, 0.03, 0.04, 1.0);
+            gl.clearColor(0.02, 0.03, 0.05, 1.0);
             gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
             gl.enable(gl.DEPTH_TEST);
             gl.enable(gl.BLEND);
             gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
 
             const asp = canvas.clientWidth / canvas.clientHeight;
-            const p = new Float32Array([1/(asp*0.15),0,0,0, 0,1/0.15,0,0, 0,0,-1.0001,-1, 0,0,-0.2,0]);
+            // Узкий FOV для эффекта кинокамеры
+            const p = new Float32Array([1/(asp*0.12),0,0,0, 0,1/0.12,0,0, 0,0,-1.0001,-1, 0,0,-0.2,0]);
 
             gl.useProgram(prog);
             gl.bindBuffer(gl.ARRAY_BUFFER, buf);
@@ -91,11 +98,10 @@
             gl.uniformMatrix4fv(pUni, false, p);
             gl.uniform1f(tUni, time * 0.001);
 
-            for(let i=0; i<18; i++) {
-                let m = new Float32Array([1,0,0,0, 0,1,0,0, 0,0,1,0, 0,-1.2,-6,1]);
-                gl.uniformMatrix4fv(mUni, false, m);
-                gl.drawArrays(gl.TRIANGLES, i * 6, 6);
-            }
+            // Наклон камеры (Look down)
+            let m = new Float32Array([1,0,0,0, 0,0.8,0.6,0, 0,-0.6,0.8,0, 0,-1.8,-7,1]);
+            gl.uniformMatrix4fv(mUni, false, m);
+            gl.drawArrays(gl.TRIANGLES, 0, 24 * 6);
             requestAnimationFrame(render);
         }
         requestAnimationFrame(render);
